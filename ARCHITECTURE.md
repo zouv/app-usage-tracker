@@ -76,7 +76,7 @@ AppRuntime（共享单例）
 | `tools/generate-icon.ps1` | 已有 | 可重现地生成多尺寸图标 |
 | `tools/capture-ui.ps1` | 已有 | 启动应用、切页并截图，供 UI 实跑核对 |
 | `docs/design/` | 已有 | 产品、技术和界面设计 |
-| `manager.sh` | 已有 | build/start/test/icon/pack/clean 统一入口 |
+| `manager.sh` | 已有 | build/start/test/icon/pack/clean/release 统一入口 |
 
 ## 2. 模块位置
 

@@ -56,6 +56,7 @@ sh manager.sh start   # 启动应用
 | `sh manager.sh start` | 启动 WPF 应用 |
 | `sh manager.sh test` | 运行单元测试 |
 | `sh manager.sh pack` | 发布 win-x64 自包含单文件到 `dist/` |
+| `sh manager.sh release <version>` | 升级版本号并打包单文件（本地，不含 git/CHANGELOG） |
 | `sh manager.sh icon` | 重新生成应用图标（`Assets/app.ico` + `app.png`） |
 | `sh manager.sh clean` | 清理构建与运行产物 |
 | `sh manager.sh help` | 显示帮助 |

@@ -59,6 +59,39 @@ cmd_pack() {
   ok "发布完成：${DIST_DIR}"
 }
 
+cmd_release() {
+  require_cmd dotnet
+  require_cmd git
+
+  local version="${1:-}"
+  if [ -z "${version}" ]; then
+    err "用法：sh manager.sh release <version>（例如 1.1.0）"
+    exit 2
+  fi
+  if ! printf '%s' "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    err "版本号需符合语义化版本 X.Y.Z（例如 1.1.0）：${version}"
+    exit 2
+  fi
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    err "工作区有未提交改动，请先提交或暂存后再 release。"
+    exit 1
+  fi
+
+  local file_version="${version}.0"
+
+  log "升级 csproj 版本号为 ${version}（FileVersion/AssemblyVersion ${file_version}）"
+  sed -i -E \
+    -e "s|<Version>[0-9.]+</Version>|<Version>${version}</Version>|" \
+    -e "s|<FileVersion>[0-9.]+</FileVersion>|<FileVersion>${file_version}</FileVersion>|" \
+    -e "s|<AssemblyVersion>[0-9.]+</AssemblyVersion>|<AssemblyVersion>${file_version}</AssemblyVersion>|" \
+    "${APP_PROJECT}"
+
+  # 结束可能驻留后台的实例，否则 dist\AppUsageTracker.exe 被占用无法覆盖
+  taskkill //F //IM AppUsageTracker.exe >/dev/null 2>&1 || true
+
+  cmd_pack
+}
+
 cmd_icon() {
   local script="${PROJECT_ROOT}/tools/generate-icon.ps1"
   local runner=""
@@ -97,6 +130,7 @@ app-usage-tracker — manager.sh
   test [args]    运行单元测试
   icon           重新生成应用图标（Assets/app.ico + app.png）
   pack [args]    发布 win-x64 自包含单文件到 dist/
+  release <版本>  升级 csproj 版本号并打包单文件（本地，不含 git/CHANGELOG）
   clean          清理构建、发布和运行时产物
   help           显示帮助
 EOF
@@ -111,6 +145,7 @@ main() {
     test) cmd_test "$@" ;;
     icon) cmd_icon ;;
     pack) cmd_pack "$@" ;;
+    release) cmd_release "$@" ;;
     clean) cmd_clean ;;
     help|-h|--help) cmd_help ;;
     *) err "未知命令：${cmd}"; cmd_help; exit 2 ;;

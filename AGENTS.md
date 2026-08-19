@@ -61,6 +61,8 @@ sh manager.sh start
 sh manager.sh pack
 ```
 
+新版本发布走 `/app-release` skill：AI 判定版本号、预检、改写 CHANGELOG，调用 `sh manager.sh release <version>` 升级版本号并打包，复核后提交、打 tag、推送并创建 GitHub Release。
+
 ## 5. 项目文档
 
 | 文件 | 用途 |
