@@ -1,0 +1,38 @@
+# .NET 构建产物
+bin/
+obj/
+dist/
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# manager.sh 运行时
+.runtime/
+
+# Claude 协作目录（不入库）
+.claude/
+
+# 用户数据和日志
+data/
+*.log
+*.tmp
+*.bak
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains
+_ReSharper*/
+*.DotSettings.user
+
+# Windows
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,41 @@
+<Application x:Class="AppUsageTracker.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:AppUsageTracker.Converters"
+             xmlns:viewModels="clr-namespace:AppUsageTracker.ViewModels"
+             xmlns:views="clr-namespace:AppUsageTracker.Views"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 第 0 项是调色板槽位，ThemeService 会整体替换为 Palette.Light / Palette.Dark -->
+                <ResourceDictionary Source="Themes/Palette.Light.xaml" />
+                <ResourceDictionary Source="Themes/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
+            <converters:StringEqualsConverter x:Key="StringEquals" />
+            <converters:HexBrushConverter x:Key="HexBrush" />
+            <converters:NonZeroCountVisibilityConverter x:Key="NonZeroCountVisibility" />
+            <converters:ZeroCountVisibilityConverter x:Key="ZeroCountVisibility" />
+            <converters:Base64ImageConverter x:Key="Base64Image" />
+
+            <DataTemplate DataType="{x:Type viewModels:OverviewViewModel}">
+                <views:OverviewView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:AppsViewModel}">
+                <views:AppsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:StatisticsViewModel}">
+                <views:StatisticsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:TimelineViewModel}">
+                <views:TimelineView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
+                <views:SettingsView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
