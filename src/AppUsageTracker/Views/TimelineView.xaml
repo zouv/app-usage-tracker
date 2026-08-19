@@ -1,0 +1,89 @@
+<UserControl x:Class="AppUsageTracker.Views.TimelineView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="26,22,26,30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="时间记录" Style="{StaticResource Text.PageTitle}" />
+                <TextBlock Text="查看、补录和修正原始活动会话"
+                           Style="{StaticResource Text.Muted}" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="‹" Command="{Binding PreviousDayCommand}" />
+                <DatePicker SelectedDate="{Binding SelectedDate}" Margin="8,0" />
+                <Button Content="›" Command="{Binding NextDayCommand}" Margin="0,0,12,0" />
+                <Button Content="导出 CSV" Command="{Binding ExportCsvCommand}" Margin="0,0,8,0" />
+                <Button Content="清除当日" Command="{Binding ClearSelectedDayCommand}"
+                        Margin="0,0,8,0" />
+                <Button Content="+ 补录" Command="{Binding AddSessionCommand}"
+                        Style="{StaticResource Button.Primary}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <DataGrid Grid.Row="0" ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="日期" Binding="{Binding Date}" Width="110" />
+                        <DataGridTextColumn Header="时间" Binding="{Binding TimeRange}" Width="180" />
+                        <DataGridTextColumn Header="软件" Binding="{Binding ApplicationName}" Width="*" />
+                        <DataGridTextColumn Header="时长" Binding="{Binding Duration}" Width="120" />
+                        <DataGridTextColumn Header="来源" Binding="{Binding Source}" Width="120" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="12">
+                        <Button Content="与上一条合并" Command="{Binding MergeWithPreviousCommand}"
+                                Margin="0,0,8,0" />
+                        <Button Content="标记为空闲" Command="{Binding MarkAsIdleCommand}"
+                                Margin="0,0,8,0" />
+                        <Button Content="编辑" Command="{Binding EditSessionCommand}" Margin="0,0,8,0" />
+                        <Button Content="删除" Command="{Binding DeleteSessionCommand}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.RowSpan="2" Background="#55000000"
+                Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVisibility}}">
+            <Border Width="500" Style="{StaticResource Card}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="编辑时间记录" Style="{StaticResource Text.SectionTitle}"
+                               Margin="0,0,0,14" />
+                    <TextBlock Text="软件" />
+                    <ComboBox ItemsSource="{Binding Apps}" SelectedItem="{Binding EditApp}"
+                              DisplayMemberPath="Name" Margin="0,5,0,10" />
+                    <TextBlock Text="开始时间" />
+                    <TextBox Text="{Binding EditStart, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
+                             Margin="0,5,0,10" />
+                    <TextBlock Text="结束时间" />
+                    <TextBox Text="{Binding EditEnd, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
+                             Margin="0,5,0,10" />
+                    <TextBlock Text="备注" />
+                    <TextBox Text="{Binding EditNotes}" Height="60" AcceptsReturn="True"
+                             Margin="0,5,0,12" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="取消" Command="{Binding CancelEditorCommand}"
+                                Margin="0,0,8,0" />
+                        <Button Content="保存" Command="{Binding SaveEditorCommand}"
+                                Style="{StaticResource Button.Primary}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>
