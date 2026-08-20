@@ -48,7 +48,11 @@ public sealed class UsageNotificationService : IDisposable
 
         var localNow = DateTime.Now;
         var today = DateOnly.FromDateTime(localNow);
-        if (localNow.Hour >= 18 && _lastSummaryDate != today)
+        if (ShouldFireDailySummary(
+            localNow,
+            _lastSummaryDate,
+            _runtime.Settings.DailySummaryHour,
+            _runtime.Settings.DailySummaryMinute))
         {
             var summary = _runtime.Statistics.Build(
                 Models.StatisticsPeriod.Day,
@@ -64,5 +68,24 @@ public sealed class UsageNotificationService : IDisposable
                     $"使用最多：{summary.TopApp?.Name ?? "暂无"}。");
             }
         }
+    }
+
+    /// <summary>判断当前时刻是否应弹出今日摘要：到达配置时间、且当日尚未弹过。</summary>
+    public static bool ShouldFireDailySummary(
+        DateTime localNow,
+        DateOnly? lastSummaryDate,
+        int hour,
+        int minute)
+    {
+        var today = DateOnly.FromDateTime(localNow);
+        if (lastSummaryDate == today)
+        {
+            return false;
+        }
+
+        var fireTime = new TimeOnly(
+            Math.Clamp(hour, 0, 23),
+            Math.Clamp(minute, 0, 59));
+        return TimeOnly.FromDateTime(localNow) >= fireTime;
     }
 }

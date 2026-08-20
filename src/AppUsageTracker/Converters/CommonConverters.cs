@@ -58,6 +58,39 @@ public sealed class StringEqualsConverter : IValueConverter
         Binding.DoNothing;
 }
 
+public sealed class EnumEqualsConverter : IValueConverter
+{
+    public object Convert(
+        object value,
+        Type targetType,
+        object parameter,
+        CultureInfo culture) =>
+        value is not null &&
+        string.Equals(value.ToString(), parameter?.ToString(), StringComparison.Ordinal);
+
+    public object ConvertBack(
+        object value,
+        Type targetType,
+        object parameter,
+        CultureInfo culture)
+    {
+        // 仅在被选中（true）时回写，避免 RadioButton 组取消勾选时覆盖已选周期。
+        if (value is not true || targetType is null)
+        {
+            return Binding.DoNothing;
+        }
+
+        try
+        {
+            return Enum.Parse(targetType, parameter?.ToString() ?? string.Empty);
+        }
+        catch (ArgumentException)
+        {
+            return Binding.DoNothing;
+        }
+    }
+}
+
 public sealed class HexBrushConverter : IValueConverter
 {
     public object Convert(
