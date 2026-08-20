@@ -125,6 +125,23 @@
                                    Margin="0,0,0,10" />
                         <CheckBox Content="启用使用提醒与每日摘要"
                                   IsChecked="{Binding NotificationsEnabled}" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="每日摘要时间" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1" Text="{Binding DailySummaryHour}" />
+                            <TextBlock Grid.Column="2" Text="时" VerticalAlignment="Center"
+                                       Margin="8,0,12,0" />
+                            <TextBox Grid.Column="3" Text="{Binding DailySummaryMinute}" />
+                            <TextBlock Grid.Column="4" Text="分（每天该时刻弹出今日摘要）"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       Style="{StaticResource Text.Muted}" />
+                        </Grid>
                         <CheckBox Content="保存窗口标题（可能包含敏感信息）"
                                   IsChecked="{Binding SaveWindowTitles}" />
                         <Grid Margin="0,8,0,0">

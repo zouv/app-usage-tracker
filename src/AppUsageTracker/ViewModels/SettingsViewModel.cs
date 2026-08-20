@@ -61,6 +61,12 @@ public partial class SettingsViewModel : ObservableObject
     private bool _notificationsEnabled;
 
     [ObservableProperty]
+    private int _dailySummaryHour = 18;
+
+    [ObservableProperty]
+    private int _dailySummaryMinute;
+
+    [ObservableProperty]
     private bool _saveWindowTitles;
 
     [ObservableProperty]
@@ -79,6 +85,8 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnAutoSaveSecondsChanged(int value) => ApplyIfNotLoading();
     partial void OnMaxHistoryDaysChanged(int value) => ApplyIfNotLoading();
     partial void OnNotificationsEnabledChanged(bool value) => ApplyIfNotLoading();
+    partial void OnDailySummaryHourChanged(int value) => ApplyIfNotLoading();
+    partial void OnDailySummaryMinuteChanged(int value) => ApplyIfNotLoading();
     partial void OnSaveWindowTitlesChanged(bool value) => ApplyIfNotLoading();
     partial void OnThemeChanged(string value) => ApplyIfNotLoading();
 
@@ -164,6 +172,8 @@ public partial class SettingsViewModel : ObservableObject
         settings.AutoSaveSeconds = Math.Clamp(AutoSaveSeconds, 5, 3600);
         settings.MaxHistoryDays = Math.Clamp(MaxHistoryDays, 7, 3650);
         settings.NotificationsEnabled = NotificationsEnabled;
+        settings.DailySummaryHour = Math.Clamp(DailySummaryHour, 0, 23);
+        settings.DailySummaryMinute = Math.Clamp(DailySummaryMinute, 0, 59);
         settings.SaveWindowTitles = SaveWindowTitles;
         settings.Theme = Theme;
 
@@ -203,6 +213,8 @@ public partial class SettingsViewModel : ObservableObject
             AutoSaveSeconds = settings.AutoSaveSeconds;
             MaxHistoryDays = settings.MaxHistoryDays;
             NotificationsEnabled = settings.NotificationsEnabled;
+            DailySummaryHour = settings.DailySummaryHour;
+            DailySummaryMinute = settings.DailySummaryMinute;
             SaveWindowTitles = settings.SaveWindowTitles;
             Theme = settings.Theme;
         }

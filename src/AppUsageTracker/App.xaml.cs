@@ -1,5 +1,6 @@
 using System.Windows;
 using System.IO;
+using System.Threading;
 using AppUsageTracker.Services;
 using AppUsageTracker.ViewModels;
 
@@ -7,6 +8,12 @@ namespace AppUsageTracker;
 
 public partial class App : Application
 {
+    private const string SingleInstanceMutexName = "AppUsageTracker.SingleInstance";
+    private const string ShowInstanceEventName = "AppUsageTracker.ShowInstance";
+
+    private Mutex? _singleInstanceMutex;
+    private EventWaitHandle? _showInstanceSignal;
+    private Thread? _showSignalThread;
     private AppRuntime? _runtime;
     private TrayIconService? _trayIcon;
     private UsageNotificationService? _notifications;
@@ -25,6 +32,23 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs eventArgs)
     {
         base.OnStartup(eventArgs);
+
+        // 单实例：已有一个实例运行时，唤醒它并退出本实例，避免双实例争抢数据文件。
+        _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            SignalExistingInstance();
+            Shutdown();
+            return;
+        }
+
+        _showInstanceSignal = new EventWaitHandle(
+            false,
+            EventResetMode.AutoReset,
+            ShowInstanceEventName);
+        _showSignalThread = new Thread(ShowInstanceSignalLoop) { IsBackground = true };
+        _showSignalThread.Start();
+
         try
         {
             AppLogger.Info("应用开始初始化。");
@@ -93,6 +117,52 @@ public partial class App : Application
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             Shutdown(1);
+        }
+    }
+
+    /// <summary>通知已运行的首实例呼出主窗口；首实例尚未就绪时静默忽略。</summary>
+    private static void SignalExistingInstance()
+    {
+        try
+        {
+            using var signal = EventWaitHandle.OpenExisting(ShowInstanceEventName);
+            signal.Set();
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+        }
+    }
+
+    /// <summary>后台监听唤醒信号，收到后切回 UI 线程呼出主窗口。</summary>
+    private void ShowInstanceSignalLoop()
+    {
+        while (true)
+        {
+            try
+            {
+                var signal = _showInstanceSignal;
+                if (signal is null)
+                {
+                    return;
+                }
+
+                signal.WaitOne();
+                if (_isExiting)
+                {
+                    return;
+                }
+
+                Dispatcher.Invoke(ShowMainWindow);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Debug($"单实例唤醒线程异常：{exception.Message}");
+                return;
+            }
         }
     }
 
@@ -172,6 +242,23 @@ public partial class App : Application
         }
 
         _isExiting = true;
+        _showInstanceSignal?.Set();
+        _showInstanceSignal?.Dispose();
+        _showInstanceSignal = null;
+        if (_singleInstanceMutex is not null)
+        {
+            try
+            {
+                _singleInstanceMutex.ReleaseMutex();
+            }
+            catch (ApplicationException)
+            {
+                // 互斥体未被本线程持有，忽略。
+            }
+            _singleInstanceMutex.Dispose();
+            _singleInstanceMutex = null;
+        }
+
         _hotkeyService?.Dispose();
         _mainWindow?.Close();
         _notifications?.Dispose();

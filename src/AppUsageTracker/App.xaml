@@ -16,6 +16,7 @@
             <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <converters:StringEqualsConverter x:Key="StringEquals" />
+            <converters:EnumEqualsConverter x:Key="EnumEquals" />
             <converters:HexBrushConverter x:Key="HexBrush" />
             <converters:NonZeroCountVisibilityConverter x:Key="NonZeroCountVisibility" />
             <converters:ZeroCountVisibilityConverter x:Key="ZeroCountVisibility" />

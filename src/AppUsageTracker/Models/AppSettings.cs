@@ -27,5 +27,11 @@ public sealed class AppSettings
 
     public bool NotificationsEnabled { get; set; } = true;
 
+    /// <summary>每日摘要通知的触发小时（0-23）。</summary>
+    public int DailySummaryHour { get; set; } = 18;
+
+    /// <summary>每日摘要通知的触发分钟（0-59）。</summary>
+    public int DailySummaryMinute { get; set; }
+
     public bool SaveWindowTitles { get; set; }
 }

@@ -53,6 +53,7 @@ AppRuntime（共享单例）
 | --- | --- | --- |
 | `AppUsageTracker.sln` | 已有 | 主项目和测试项目解决方案 |
 | `src/AppUsageTracker/App.xaml` | 已有 | WPF 应用入口和全局资源 |
+| `src/AppUsageTracker/App.xaml.cs` | 已有 | 应用启动/退出、单实例守卫和主窗口呼出 |
 | `src/AppUsageTracker/MainWindow.xaml` | 已有 | 单主窗口、左侧导航和页面承载 |
 | `src/AppUsageTracker/AppUsageTracker.csproj` | 已有 | WPF、WinForms 托盘和 MVVM 依赖配置 |
 | `tests/AppUsageTracker.Tests/` | 已有 | xUnit 测试项目 |
@@ -101,7 +102,7 @@ AppRuntime（共享单例）
 | 统计服务 | `Services/StatisticsService.cs` | 多周期聚合查询 |
 | 托盘 | `Services/TrayIconService.cs` | 后台常驻和快捷菜单 |
 | 全局快捷键 | `Services/GlobalHotkeyService.cs`、`Models/HotkeyDefinition.cs` | 系统级快捷键呼出 / 隐藏主窗口 |
-| 通知 | `Services/UsageNotificationService.cs` | 连续使用提醒和每日摘要 |
+| 通知 | `Services/UsageNotificationService.cs` | 连续使用提醒和每日摘要（时间可配置） |
 | 数据编辑 | `Services/SessionEditor.cs` | 会话补录、修改、删除和合并 |
 | 导出备份 | `CsvExportService.cs`、`JsonAppDataStore.cs` | CSV、ZIP 备份和恢复 |
 
@@ -153,6 +154,7 @@ RegisterHotKey
 
 ```text
 App.OnStartup
+ -> 单实例守卫（命名 Mutex；已运行则经命名 EventWaitHandle 唤醒首实例并退出）
  -> JsonAppDataStore.LoadAsync
  -> AppRuntime.InitializeAsync
  -> ActivitySessionService.RecoverOpenSessions
@@ -162,7 +164,7 @@ App.OnStartup
 App.ExitApplication
  -> ActivitySessionService.StopAsync
  -> 保存设置 / 软件 / 会话 / 修正
- -> 释放托盘与系统监听
+ -> 释放托盘、系统监听与单实例互斥体
 ```
 
 ## 4. 数据契约

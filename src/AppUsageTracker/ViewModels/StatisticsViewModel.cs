@@ -75,15 +75,6 @@ public partial class StatisticsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SelectPeriod(string period)
-    {
-        if (Enum.TryParse<StatisticsPeriod>(period, out var parsed))
-        {
-            SelectedPeriod = parsed;
-        }
-    }
-
-    [RelayCommand]
     private void SelectApp(AppUsageRow? row)
     {
         if (row is null)
