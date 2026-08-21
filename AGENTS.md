@@ -61,19 +61,30 @@ sh manager.sh start
 sh manager.sh pack
 ```
 
-新版本发布走 `/app-release` skill：AI 判定版本号、预检、改写 CHANGELOG，调用 `sh manager.sh release <version>` 升级版本号并打包，复核后提交、打 tag、推送并创建 GitHub Release。
+新版本发布流程：AI 判定版本号、预检、改写 CHANGELOG，调用 `sh manager.sh release <version>` 升级版本号并打包，复核后提交、打 tag、推送并创建 GitHub Release。
 
 ## 5. 项目文档
 
 | 文件 | 用途 |
 | --- | --- |
 | `ARCHITECTURE.md` | 当前代码结构、任务路由和关键链路 |
-| `HANDOFF.md` | 当前进行中的任务、验证状态和下一步 |
+| `HANDOFF.md` | 跨对话接力状态（待处理 + 注意事项，完成即移除） |
 | `CHANGELOG.md` | 已完成版本和用户可感知变化 |
 | `docs/00-目录.md` | 文档入口 |
 | `docs/01-技术栈说明.md` | 技术选型和依赖 |
 | `docs/02-使用说明.md` | 构建、测试、运行和发布 |
 | `docs/design/software-usage-duration-design.md` | 产品与界面设计 |
+
+### HANDOFF 规范
+
+`HANDOFF.md` 只用于跨对话接力，只保留两类内容：
+
+- **待处理**：当前进行中的**应用功能**任务和下一步。
+- **注意事项**：后续会话需要留意的坑与约束。
+
+已经完成的任务、验证结果、历史决策等一律移除（里程碑与成果归 `CHANGELOG.md`），避免堆积。
+
+流程性待办（git 提交、release 发布、同步发布等）**不记录到 `HANDOFF.md`**——`HANDOFF.md` 只关注应用功能。
 
 ## 6. 代码规范
 

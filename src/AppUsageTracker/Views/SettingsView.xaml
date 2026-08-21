@@ -175,6 +175,11 @@
                                    Margin="0,10,0,0" />
                     </StackPanel>
                 </Border>
+
+                <TextBlock Text="© zouv"
+                           Style="{StaticResource Text.Muted}"
+                           HorizontalAlignment="Center"
+                           Margin="0,18,0,0" />
             </StackPanel>
         </Grid>
     </ScrollViewer>

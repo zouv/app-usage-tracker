@@ -8,17 +8,18 @@ coverage/
 *.coverage
 *.coveragexml
 
+# Python 脚本缓存
+__pycache__/
+
 # manager.sh 运行时
 .runtime/
-
-# Claude 协作目录（不入库）
-.claude/
 
 # 用户数据和日志
 data/
 *.log
 *.tmp
 *.bak
+.claude/
 
 # IDE
 .vs/
@@ -36,3 +37,4 @@ _ReSharper*/
 # Windows
 Thumbs.db
 Desktop.ini
+

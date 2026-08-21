@@ -6,7 +6,7 @@
 #
 # 定位：整套文档体系靠 AI 自觉维护，本脚本补上「脚本能判的」硬兜底——
 #   占位符残留、文档体量超标、根文档缺失、CHANGELOG 疑似漏记。
-#   ⚠ 只查机械可判的项；语义漂移（图谱↔代码是否对得上）仍需跑 doc-audit 由 AI 核对。
+#   ⚠ 只查机械可判的项；语义漂移（图谱↔代码是否对得上）仍需人工核对。
 #
 # 建议：接入 git pre-commit 或 CI，让「文档不腐化」从靠记性变成靠机制。
 # 跨技术栈说明：本脚本纯 bash、无 uv/dotnet 依赖，重写 manager.sh 换栈时不要删它。
@@ -26,7 +26,7 @@ ROOT_DOCS=(AGENTS.md ARCHITECTURE.md CHANGELOG.md HANDOFF.md)
 
 # 0. 若仍是「未初始化模板」（存在 _TEMPLATE_README.md）→ 提示先初始化，跳过体检。
 if [ -f _TEMPLATE_README.md ]; then
-  wrn "检测到 _TEMPLATE_README.md：项目似乎尚未初始化。请先让 AI 执行初始化（或跑 init-docs），再体检。"
+  wrn "检测到 _TEMPLATE_README.md：项目似乎尚未初始化。请先让 AI 执行初始化，再体检。"
   exit 0
 fi
 
@@ -79,9 +79,9 @@ fi
 
 printf '\n'
 if [ "${fail}" -gt 0 ]; then
-  printf '\033[1;31m✗ %d 项硬错误\033[0m，%d 项警告。语义漂移请再跑 doc-audit。\n' "${fail}" "${warn}"
+  printf '\033[1;31m✗ %d 项硬错误\033[0m，%d 项警告。语义漂移请人工核对。\n' "${fail}" "${warn}"
   exit 1
 else
-  printf '\033[1;32m✓ 机械检查通过\033[0m（%d 项警告）。语义漂移请再跑 doc-audit。\n' "${warn}"
+  printf '\033[1;32m✓ 机械检查通过\033[0m（%d 项警告）。语义漂移请人工核对。\n' "${warn}"
   exit 0
 fi
