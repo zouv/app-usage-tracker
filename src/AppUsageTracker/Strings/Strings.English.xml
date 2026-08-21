@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English UI strings. Keys must match Strings.zh-CN.xml one to one. -->
+<Strings>
+    <!-- App & main window -->
+    <String Key="Loc.App.Title">App Usage Tracker</String>
+    <String Key="Loc.App.InitFailed">App failed to initialize: {0}</String>
+    <String Key="Loc.App.InitFailedTitle">App Usage Tracker</String>
+
+    <!-- Sidebar navigation -->
+    <String Key="Loc.Nav.Overview">Overview</String>
+    <String Key="Loc.Nav.Apps">Applications</String>
+    <String Key="Loc.Nav.Statistics">Statistics</String>
+    <String Key="Loc.Nav.Timeline">Timeline</String>
+    <String Key="Loc.Nav.Settings">Settings</String>
+    <String Key="Loc.Nav.PrivateModeTooltip">No usage is recorded during private mode</String>
+
+    <!-- Listener status (sidebar & tray) -->
+    <String Key="Loc.Status.Running">Listening</String>
+    <String Key="Loc.Status.Paused">Listening paused</String>
+    <String Key="Loc.Status.Private">Private mode</String>
+    <String Key="Loc.Status.Stopped">Listening not started</String>
+
+    <!-- Activity states -->
+    <String Key="Loc.State.Active">Active</String>
+    <String Key="Loc.State.Idle">User idle</String>
+    <String Key="Loc.State.Locked">Locked</String>
+    <String Key="Loc.State.Suspended">Suspended</String>
+    <String Key="Loc.State.Paused">Listening paused</String>
+    <String Key="Loc.State.Private">Private mode</String>
+    <String Key="Loc.State.Untracked">Current app not configured</String>
+    <String Key="Loc.State.Stopped">Listening not started</String>
+
+    <!-- Overview page -->
+    <String Key="Loc.Overview.Title">Today</String>
+    <String Key="Loc.Overview.ContinuousUse">Current session</String>
+    <String Key="Loc.Overview.TodayTotal">Today</String>
+    <String Key="Loc.Overview.TodayEffective">Effective time today</String>
+    <String Key="Loc.Overview.TopApp">Most used</String>
+    <String Key="Loc.Overview.SwitchCount">Switches</String>
+    <String Key="Loc.Overview.Longest">Longest session</String>
+    <String Key="Loc.Overview.Timeline">Today's activity timeline</String>
+    <String Key="Loc.Overview.ChartHint">Scroll to zoom · Drag to pan · Double-click to reset</String>
+    <String Key="Loc.Overview.NoData">No records</String>
+    <String Key="Loc.Overview.Ranking">Today's ranking</String>
+    <String Key="Loc.Overview.Pause">Pause listening</String>
+    <String Key="Loc.Overview.Resume">Resume listening</String>
+    <String Key="Loc.Overview.NoActivity">No activity</String>
+    <String Key="Loc.Overview.Untracked">No app configured</String>
+    <String Key="Loc.Overview.None">None</String>
+
+    <!-- Statistics page -->
+    <String Key="Loc.Statistics.Title">Statistics</String>
+    <String Key="Loc.Statistics.Subtitle">View usage trends and time distribution</String>
+    <String Key="Loc.Statistics.Day">Day</String>
+    <String Key="Loc.Statistics.Week">Week</String>
+    <String Key="Loc.Statistics.Month">Month</String>
+    <String Key="Loc.Statistics.Year">Year</String>
+    <String Key="Loc.Statistics.All">All</String>
+    <String Key="Loc.Statistics.Total">Total effective time</String>
+    <String Key="Loc.Statistics.DailyAvg">Daily average</String>
+    <String Key="Loc.Statistics.TopApp">Most used</String>
+    <String Key="Loc.Statistics.Longest">Longest session</String>
+    <String Key="Loc.Statistics.NoData">No records in this range</String>
+    <String Key="Loc.Statistics.Ranking">App ranking</String>
+    <String Key="Loc.Statistics.DetailHint">Click an app in the ranking for details</String>
+    <String Key="Loc.Statistics.AllTime">All time</String>
+    <String Key="Loc.Statistics.ChartDaily">Daily usage</String>
+    <String Key="Loc.Statistics.ChartDayByApp">Today's usage by app</String>
+    <String Key="Loc.Statistics.ChartWeekly">Weekly usage</String>
+    <String Key="Loc.Statistics.ChartAllByApp">Total usage by app</String>
+    <String Key="Loc.Statistics.Last7Days">Last 7 days</String>
+    <String Key="Loc.Statistics.Last30Days">Last 30 days</String>
+    <String Key="Loc.Statistics.TotalAccumulated">Total</String>
+
+    <!-- Applications page -->
+    <String Key="Loc.Apps.Title">Applications</String>
+    <String Key="Loc.Apps.Subtitle">Only enabled apps are included in usage tracking</String>
+    <String Key="Loc.Apps.Scan">Scan running apps</String>
+    <String Key="Loc.Apps.Add">+ Add app</String>
+    <String Key="Loc.Apps.SearchTooltip">Search by name, process or path</String>
+    <String Key="Loc.Apps.Col.App">App</String>
+    <String Key="Loc.Apps.Col.Category">Category</String>
+    <String Key="Loc.Apps.Col.Path">Match path</String>
+    <String Key="Loc.Apps.Col.Mode">Mode</String>
+    <String Key="Loc.Apps.Col.Enabled">Enabled</String>
+    <String Key="Loc.Apps.EnableAll">Enable all</String>
+    <String Key="Loc.Apps.DisableAll">Disable all</String>
+    <String Key="Loc.Apps.Toggle">Enable/Disable</String>
+    <String Key="Loc.Apps.Edit">Edit</String>
+    <String Key="Loc.Apps.Delete">Delete</String>
+    <String Key="Loc.Apps.EditorAdd">Add app</String>
+    <String Key="Loc.Apps.EditorEdit">Edit {0}</String>
+    <String Key="Loc.Apps.Field.Name">App name</String>
+    <String Key="Loc.Apps.Field.Process">Process name</String>
+    <String Key="Loc.Apps.Field.Path">Executable path</String>
+    <String Key="Loc.Apps.Field.Category">Category</String>
+    <String Key="Loc.Apps.Field.Mode">Tracking mode</String>
+    <String Key="Loc.Apps.Field.TitleMatch">Window title contains (optional)</String>
+    <String Key="Loc.Apps.Field.Color">Color (#RRGGBB)</String>
+    <String Key="Loc.Apps.Field.EnableListen">Enable tracking</String>
+    <String Key="Loc.Apps.Field.IgnoreIdle">Ignore idle time</String>
+    <String Key="Loc.Apps.Field.Notes">Notes</String>
+    <String Key="Loc.Apps.Cancel">Cancel</String>
+    <String Key="Loc.Apps.Save">Save</String>
+    <String Key="Loc.Apps.SelectRunning">Select a running app</String>
+    <String Key="Loc.Apps.Col.Process">Process</String>
+    <String Key="Loc.Apps.Col.WindowTitle">Window title</String>
+    <String Key="Loc.Apps.Col.ProcessPath">Path</String>
+    <String Key="Loc.Apps.Close">Close</String>
+    <String Key="Loc.Apps.UseSelected">Use selected</String>
+    <String Key="Loc.Apps.Category.All">All categories</String>
+    <String Key="Loc.Apps.Category.Uncategorized">Uncategorized</String>
+    <String Key="Loc.Apps.Category.Development">Development</String>
+    <String Key="Loc.Apps.Category.Browser">Browser</String>
+    <String Key="Loc.Apps.Category.Game">Games</String>
+    <String Key="Loc.Apps.Category.Communication">Communication</String>
+    <String Key="Loc.Apps.Category.Media">Media</String>
+    <String Key="Loc.Apps.Category.Office">Office</String>
+    <String Key="Loc.Apps.Status.All">All statuses</String>
+    <String Key="Loc.Apps.Status.Enabled">Enabled</String>
+    <String Key="Loc.Apps.Status.Disabled">Disabled</String>
+    <String Key="Loc.Apps.Mode.Effective">Effective</String>
+    <String Key="Loc.Apps.Mode.Foreground">Foreground</String>
+    <String Key="Loc.Apps.Mode.Running">Running</String>
+
+    <!-- Timeline page -->
+    <String Key="Loc.Timeline.Title">Timeline</String>
+    <String Key="Loc.Timeline.Subtitle">View, add and correct raw activity sessions</String>
+    <String Key="Loc.Timeline.ExportCsv">Export CSV</String>
+    <String Key="Loc.Timeline.ClearDay">Clear day</String>
+    <String Key="Loc.Timeline.Add">+ Add</String>
+    <String Key="Loc.Timeline.Col.Date">Date</String>
+    <String Key="Loc.Timeline.Col.Time">Time</String>
+    <String Key="Loc.Timeline.Col.App">App</String>
+    <String Key="Loc.Timeline.Col.Duration">Duration</String>
+    <String Key="Loc.Timeline.Col.Source">Source</String>
+    <String Key="Loc.Timeline.Merge">Merge with previous</String>
+    <String Key="Loc.Timeline.MarkIdle">Mark as idle</String>
+    <String Key="Loc.Timeline.EditTitle">Edit session</String>
+    <String Key="Loc.Timeline.Field.App">App</String>
+    <String Key="Loc.Timeline.Field.Start">Start time</String>
+    <String Key="Loc.Timeline.Field.End">End time</String>
+    <String Key="Loc.Timeline.Field.Notes">Notes</String>
+    <String Key="Loc.Timeline.DeletedApp">Deleted app</String>
+    <String Key="Loc.Timeline.Manual">Manual</String>
+    <String Key="Loc.Timeline.CsvFilter">CSV files|*.csv</String>
+
+    <!-- Session end reasons -->
+    <String Key="Loc.Session.Reason.None">—</String>
+    <String Key="Loc.Session.Reason.WindowChanged">Window changed</String>
+    <String Key="Loc.Session.Reason.Idle">Idle</String>
+    <String Key="Loc.Session.Reason.Locked">Locked</String>
+    <String Key="Loc.Session.Reason.Suspended">Suspended</String>
+    <String Key="Loc.Session.Reason.Paused">Paused</String>
+    <String Key="Loc.Session.Reason.PrivateMode">Private mode</String>
+    <String Key="Loc.Session.Reason.Disabled">App disabled</String>
+    <String Key="Loc.Session.Reason.Midnight">Midnight split</String>
+    <String Key="Loc.Session.Reason.ApplicationExit">App exit</String>
+    <String Key="Loc.Session.Reason.Recovered">Recovered</String>
+    <String Key="Loc.Session.Reason.Manual">Manual</String>
+
+    <!-- Settings page -->
+    <String Key="Loc.Settings.Title">Settings</String>
+    <String Key="Loc.Settings.Subtitle">Adjust app behavior, tracking rules and data management (changes apply immediately)</String>
+    <String Key="Loc.Settings.Section.Language">Language</String>
+    <String Key="Loc.Settings.LanguageHint">Interface language, applies immediately</String>
+    <String Key="Loc.Settings.Section.Startup">Startup &amp; background</String>
+    <String Key="Loc.Settings.AutoStart">Start on boot</String>
+    <String Key="Loc.Settings.StartMinimized">Start minimized</String>
+    <String Key="Loc.Settings.MinimizeToTray">Minimize to tray on close</String>
+    <String Key="Loc.Settings.Hotkey">Global hotkey</String>
+    <String Key="Loc.Settings.HotkeyTooltip">Click the box, then press a key combo, e.g. Ctrl+Alt+T</String>
+    <String Key="Loc.Settings.HotkeyCapture">Press a key combo…</String>
+    <String Key="Loc.Settings.HotkeyAction">Show / hide main window</String>
+    <String Key="Loc.Settings.HotkeyHint">Click the box and press a combo (e.g. Ctrl+Alt+T) to set it; press Esc to clear and disable.</String>
+    <String Key="Loc.Settings.Section.Tracking">Effective tracking</String>
+    <String Key="Loc.Settings.ExcludeIdle">Exclude idle time</String>
+    <String Key="Loc.Settings.IdleThreshold">Idle threshold</String>
+    <String Key="Loc.Settings.Minutes">min</String>
+    <String Key="Loc.Settings.ShortSwitch">Short-switch merge threshold</String>
+    <String Key="Loc.Settings.Seconds">s</String>
+    <String Key="Loc.Settings.AutoSave">Auto-save interval</String>
+    <String Key="Loc.Settings.History">Keep history</String>
+    <String Key="Loc.Settings.Days">days</String>
+    <String Key="Loc.Settings.Section.Notifications">Notifications &amp; privacy</String>
+    <String Key="Loc.Settings.Notifications">Enable usage reminders and daily summary</String>
+    <String Key="Loc.Settings.DailySummary">Daily summary time</String>
+    <String Key="Loc.Settings.Hour">h</String>
+    <String Key="Loc.Settings.DailySummaryHint">m (daily summary fires at this time)</String>
+    <String Key="Loc.Settings.SaveWindowTitles">Save window titles (may contain sensitive info)</String>
+    <String Key="Loc.Settings.Theme">Theme</String>
+    <String Key="Loc.Settings.Section.Data">Data management</String>
+    <String Key="Loc.Settings.OpenData">Open data directory</String>
+    <String Key="Loc.Settings.Backup">Create backup</String>
+    <String Key="Loc.Settings.Restore">Restore backup</String>
+    <String Key="Loc.Settings.Validate">Validate data</String>
+    <String Key="Loc.Settings.ClearHistory">Clear all history</String>
+    <String Key="Loc.Settings.AutoSaved">Settings saved</String>
+    <String Key="Loc.Settings.BackupSaved">Backup saved: {0}</String>
+    <String Key="Loc.Settings.BackupRestored">Backup restored, please restart the app</String>
+    <String Key="Loc.Settings.ValidateOk">Data validation passed</String>
+    <String Key="Loc.Settings.ValidateIssues">Found {0} data issue(s)</String>
+    <String Key="Loc.Settings.HistoryCleared">History and corrections cleared</String>
+    <String Key="Loc.Settings.ChooseBackupDir">Choose backup directory</String>
+    <String Key="Loc.Settings.BackupFilter">AppUsageTracker backup|*.zip</String>
+
+    <!-- System tray -->
+    <String Key="Loc.Tray.Tooltip">App Usage Tracker</String>
+    <String Key="Loc.Tray.Show">Show main window</String>
+    <String Key="Loc.Tray.Pause">Pause listening</String>
+    <String Key="Loc.Tray.Resume">Resume listening</String>
+    <String Key="Loc.Tray.Private">Toggle private mode</String>
+    <String Key="Loc.Tray.Add">Add current app</String>
+    <String Key="Loc.Tray.Exit">Exit</String>
+
+    <!-- Usage reminders & daily summary -->
+    <String Key="Loc.Notify.ReminderTitle">Usage reminder</String>
+    <String Key="Loc.Notify.ReminderMessage">You have been using {0} for {1} hour(s).</String>
+    <String Key="Loc.Notify.SummaryTitle">Daily summary</String>
+    <String Key="Loc.Notify.SummaryMessage">Effective time today {0}, most used: {1}.</String>
+
+    <!-- Units & charts -->
+    <String Key="Loc.Unit.Hours">h</String>
+    <String Key="Loc.Unit.Minutes">min</String>
+    <String Key="Loc.Unit.Seconds">s</String>
+    <String Key="Loc.Unit.Times"> times</String>
+    <String Key="Loc.Chart.Unmatched">Unmatched app</String>
+    <String Key="Loc.Chart.MoreItems">{0} more…</String>
+    <String Key="Loc.Chart.Total">Total {0}</String>
+</Strings>

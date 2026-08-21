@@ -15,6 +15,7 @@ public partial class StatisticsViewModel : ObservableObject
     {
         _runtime = runtime;
         _runtime.DataChanged += (_, _) => App.Current.Dispatcher.Invoke(Refresh);
+        LocalizationService.LanguageChanged += (_, _) => Refresh();
         AnchorDate = DateTime.Today;
         Refresh();
     }
@@ -26,7 +27,7 @@ public partial class StatisticsViewModel : ObservableObject
 
     /// <summary>柱状图标题，随统计周期切换（每日 / 每周 / 各软件）。</summary>
     [ObservableProperty]
-    private string _chartTitle = "每日使用时长";
+    private string _chartTitle = LocalizationService.T("Loc.Statistics.ChartDaily");
 
     [ObservableProperty]
     private string? _highlightedSeriesKey;
@@ -58,7 +59,7 @@ public partial class StatisticsViewModel : ObservableObject
     private string _changeText = "0%";
 
     [ObservableProperty]
-    private string _selectedAppDetail = "点击排行中的软件查看详情";
+    private string _selectedAppDetail = LocalizationService.T("Loc.Statistics.DetailHint");
 
     [RelayCommand]
     private void PreviousPeriod()
@@ -93,9 +94,10 @@ public partial class StatisticsViewModel : ObservableObject
             .Sum(item => item.DurationSeconds);
         var total = appSessions.Sum(item => item.DurationSeconds);
         SelectedAppDetail =
-            $"{row.Name}：近7天 {DurationFormatter.Format(sevenDays)}，" +
-            $"近30天 {DurationFormatter.Format(thirtyDays)}，" +
-            $"累计 {DurationFormatter.Format(total)}";
+            $"{row.Name}：" +
+            $"{LocalizationService.T("Loc.Statistics.Last7Days")} {DurationFormatter.Format(sevenDays)}，" +
+            $"{LocalizationService.T("Loc.Statistics.Last30Days")} {DurationFormatter.Format(thirtyDays)}，" +
+            $"{LocalizationService.T("Loc.Statistics.TotalAccumulated")} {DurationFormatter.Format(total)}";
     }
 
     public async void Refresh()
@@ -120,16 +122,16 @@ public partial class StatisticsViewModel : ObservableObject
         RangeLabel = FormatRange(snapshot.RangeStartLocal, snapshot.RangeEndLocal, SelectedPeriod);
         TotalDuration = DurationFormatter.Format(snapshot.TotalSeconds);
         AverageDuration = DurationFormatter.Format(snapshot.AverageDailySeconds);
-        TopAppName = snapshot.TopApp?.Name ?? "暂无";
+        TopAppName = snapshot.TopApp?.Name ?? LocalizationService.T("Loc.Overview.None");
         LongestDuration = DurationFormatter.Format(snapshot.LongestSessionSeconds);
         ChangeText = $"{snapshot.PreviousPeriodChangePercentage:+0.0;-0.0;0}%";
-        ChartTitle = SelectedPeriod switch
+        ChartTitle = LocalizationService.T(SelectedPeriod switch
         {
-            StatisticsPeriod.Day => "当日各软件使用时长",
-            StatisticsPeriod.Year => "每周使用时长",
-            StatisticsPeriod.All => "各软件累计使用时长",
-            _ => "每日使用时长",
-        };
+            StatisticsPeriod.Day => "Loc.Statistics.ChartDayByApp",
+            StatisticsPeriod.Year => "Loc.Statistics.ChartWeekly",
+            StatisticsPeriod.All => "Loc.Statistics.ChartAllByApp",
+            _ => "Loc.Statistics.ChartDaily",
+        });
 
         var appMap = _runtime.Apps.ToDictionary(app => app.Id);
         Replace(
@@ -177,11 +179,13 @@ public partial class StatisticsViewModel : ObservableObject
         StatisticsPeriod period) =>
         period switch
         {
-            StatisticsPeriod.Day => start.ToString("yyyy年M月d日"),
-            StatisticsPeriod.Month => start.ToString("yyyy年M月"),
-            StatisticsPeriod.Year => start.ToString("yyyy年"),
-            StatisticsPeriod.All => "全部时间",
-            _ => $"{start:M月d日} - {end.AddDays(-1):M月d日}",
+            StatisticsPeriod.Day => LocalizationService.FullDate(start),
+            StatisticsPeriod.Month => LocalizationService.MonthYear(start),
+            StatisticsPeriod.Year => LocalizationService.Year(start),
+            StatisticsPeriod.All => LocalizationService.T("Loc.Statistics.AllTime"),
+            _ => LocalizationService.IsEnglish
+                ? $"{start:MMM d} - {end.AddDays(-1):MMM d}"
+                : $"{start:M月d日} - {end.AddDays(-1):M月d日}",
         };
 
     private static void Replace<T>(

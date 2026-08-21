@@ -32,6 +32,10 @@
     <!-- 图标同时用于 exe、主窗口和托盘，需随程序集嵌入 -->
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app.png" />
+    <!-- 界面字符串的唯一来源：同时供代码 T() 与运行时字符串字典解析。
+         文件名刻意不带语言标签（Strings.zh-CN.xml 会被 MSBuild 当成卫星资源）。 -->
+    <EmbeddedResource Include="Strings\Strings.Chinese.xml" />
+    <EmbeddedResource Include="Strings\Strings.English.xml" />
   </ItemGroup>
 
   <ItemGroup>

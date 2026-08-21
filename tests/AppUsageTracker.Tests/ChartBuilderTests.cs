@@ -109,7 +109,7 @@ public class ChartBuilderTests
         var chart = ChartBuilder.BuildDaily(points, DateTime.MinValue, DateTime.MaxValue);
 
         Assert.Equal(3, chart.Slots.Count);
-        Assert.Equal("小时", chart.ValueUnit);
+        Assert.Equal(ChartValueUnit.Hours, chart.Unit);
     }
 
     [Fact]

@@ -23,6 +23,7 @@ public partial class TimelineViewModel : ObservableObject
         _exporter = exporter;
         SelectedDate = DateTime.Today;
         _runtime.DataChanged += (_, _) => App.Current.Dispatcher.Invoke(Refresh);
+        LocalizationService.LanguageChanged += (_, _) => Refresh();
         Refresh();
     }
 
@@ -189,7 +190,7 @@ public partial class TimelineViewModel : ObservableObject
     {
         var dialog = new SaveFileDialog
         {
-            Filter = "CSV 文件|*.csv",
+            Filter = LocalizationService.T("Loc.Timeline.CsvFilter"),
             FileName = $"usage-sessions-{SelectedDate:yyyyMMdd}.csv",
         };
         if (dialog.ShowDialog() == true)
@@ -208,8 +209,8 @@ public partial class TimelineViewModel : ObservableObject
             {
                 Session = item,
                 ApplicationName = item.ApplicationId is { } appId
-                    ? appMap.GetValueOrDefault(appId)?.Name ?? "已删除软件"
-                    : item.State.ToString(),
+                    ? appMap.GetValueOrDefault(appId)?.Name ?? LocalizationService.T("Loc.Timeline.DeletedApp")
+                    : LocalizationService.ActivityStateLabel(item.State),
             })
             .ToList();
         Sessions.Clear();

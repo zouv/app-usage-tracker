@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 中文界面字符串。键必须与 Strings.en-US.xml 一一对应。 -->
+<Strings>
+    <!-- 应用与主窗口 -->
+    <String Key="Loc.App.Title">软件使用时长统计工具</String>
+    <String Key="Loc.App.InitFailed">应用初始化失败：{0}</String>
+    <String Key="Loc.App.InitFailedTitle">软件使用时长统计</String>
+
+    <!-- 左侧导航 -->
+    <String Key="Loc.Nav.Overview">概览</String>
+    <String Key="Loc.Nav.Apps">软件管理</String>
+    <String Key="Loc.Nav.Statistics">统计分析</String>
+    <String Key="Loc.Nav.Timeline">时间记录</String>
+    <String Key="Loc.Nav.Settings">设置</String>
+    <String Key="Loc.Nav.PrivateModeTooltip">隐私模式期间不记录软件使用</String>
+
+    <!-- 监听状态（侧边栏与托盘） -->
+    <String Key="Loc.Status.Running">监听运行中</String>
+    <String Key="Loc.Status.Paused">监听已暂停</String>
+    <String Key="Loc.Status.Private">隐私模式</String>
+    <String Key="Loc.Status.Stopped">监听未启动</String>
+
+    <!-- 活动状态 -->
+    <String Key="Loc.State.Active">前台活跃</String>
+    <String Key="Loc.State.Idle">用户空闲</String>
+    <String Key="Loc.State.Locked">系统锁屏</String>
+    <String Key="Loc.State.Suspended">系统休眠</String>
+    <String Key="Loc.State.Paused">监听已暂停</String>
+    <String Key="Loc.State.Private">隐私模式</String>
+    <String Key="Loc.State.Untracked">当前软件未配置</String>
+    <String Key="Loc.State.Stopped">监听未启动</String>
+
+    <!-- 概览页 -->
+    <String Key="Loc.Overview.Title">今日概览</String>
+    <String Key="Loc.Overview.ContinuousUse">本次连续使用</String>
+    <String Key="Loc.Overview.TodayTotal">今日累计</String>
+    <String Key="Loc.Overview.TodayEffective">今日有效时长</String>
+    <String Key="Loc.Overview.TopApp">使用最多</String>
+    <String Key="Loc.Overview.SwitchCount">软件切换</String>
+    <String Key="Loc.Overview.Longest">最长连续</String>
+    <String Key="Loc.Overview.Timeline">今日活动时间线</String>
+    <String Key="Loc.Overview.ChartHint">滚轮缩放 · 拖拽平移 · 双击复位</String>
+    <String Key="Loc.Overview.NoData">暂无记录</String>
+    <String Key="Loc.Overview.Ranking">今日排行</String>
+    <String Key="Loc.Overview.Pause">暂停监听</String>
+    <String Key="Loc.Overview.Resume">继续监听</String>
+    <String Key="Loc.Overview.NoActivity">暂无活动</String>
+    <String Key="Loc.Overview.Untracked">未配置软件</String>
+    <String Key="Loc.Overview.None">暂无</String>
+
+    <!-- 统计分析页 -->
+    <String Key="Loc.Statistics.Title">统计分析</String>
+    <String Key="Loc.Statistics.Subtitle">查看使用趋势与时间分布</String>
+    <String Key="Loc.Statistics.Day">日</String>
+    <String Key="Loc.Statistics.Week">周</String>
+    <String Key="Loc.Statistics.Month">月</String>
+    <String Key="Loc.Statistics.Year">年</String>
+    <String Key="Loc.Statistics.All">全部</String>
+    <String Key="Loc.Statistics.Total">总有效时长</String>
+    <String Key="Loc.Statistics.DailyAvg">日均时长</String>
+    <String Key="Loc.Statistics.TopApp">使用最多</String>
+    <String Key="Loc.Statistics.Longest">最长连续使用</String>
+    <String Key="Loc.Statistics.NoData">该区间暂无记录</String>
+    <String Key="Loc.Statistics.Ranking">软件排行</String>
+    <String Key="Loc.Statistics.DetailHint">点击排行中的软件查看详情</String>
+    <String Key="Loc.Statistics.AllTime">全部时间</String>
+    <String Key="Loc.Statistics.ChartDaily">每日使用时长</String>
+    <String Key="Loc.Statistics.ChartDayByApp">当日各软件使用时长</String>
+    <String Key="Loc.Statistics.ChartWeekly">每周使用时长</String>
+    <String Key="Loc.Statistics.ChartAllByApp">各软件累计使用时长</String>
+    <String Key="Loc.Statistics.Last7Days">近7天</String>
+    <String Key="Loc.Statistics.Last30Days">近30天</String>
+    <String Key="Loc.Statistics.TotalAccumulated">累计</String>
+
+    <!-- 软件管理页 -->
+    <String Key="Loc.Apps.Title">软件管理</String>
+    <String Key="Loc.Apps.Subtitle">仅启用的软件会被纳入时长统计</String>
+    <String Key="Loc.Apps.Scan">扫描运行软件</String>
+    <String Key="Loc.Apps.Add">+ 添加软件</String>
+    <String Key="Loc.Apps.SearchTooltip">搜索软件名称、进程或路径</String>
+    <String Key="Loc.Apps.Col.App">软件</String>
+    <String Key="Loc.Apps.Col.Category">分类</String>
+    <String Key="Loc.Apps.Col.Path">匹配路径</String>
+    <String Key="Loc.Apps.Col.Mode">模式</String>
+    <String Key="Loc.Apps.Col.Enabled">启用</String>
+    <String Key="Loc.Apps.EnableAll">全部启用</String>
+    <String Key="Loc.Apps.DisableAll">全部停用</String>
+    <String Key="Loc.Apps.Toggle">启用/停用</String>
+    <String Key="Loc.Apps.Edit">编辑</String>
+    <String Key="Loc.Apps.Delete">删除</String>
+    <String Key="Loc.Apps.EditorAdd">添加软件</String>
+    <String Key="Loc.Apps.EditorEdit">编辑 {0}</String>
+    <String Key="Loc.Apps.Field.Name">软件名称</String>
+    <String Key="Loc.Apps.Field.Process">进程名</String>
+    <String Key="Loc.Apps.Field.Path">可执行文件路径</String>
+    <String Key="Loc.Apps.Field.Category">分类</String>
+    <String Key="Loc.Apps.Field.Mode">统计模式</String>
+    <String Key="Loc.Apps.Field.TitleMatch">窗口标题包含（可选）</String>
+    <String Key="Loc.Apps.Field.Color">颜色（#RRGGBB）</String>
+    <String Key="Loc.Apps.Field.EnableListen">启用监听</String>
+    <String Key="Loc.Apps.Field.IgnoreIdle">忽略用户空闲</String>
+    <String Key="Loc.Apps.Field.Notes">备注</String>
+    <String Key="Loc.Apps.Cancel">取消</String>
+    <String Key="Loc.Apps.Save">保存</String>
+    <String Key="Loc.Apps.SelectRunning">选择运行中的软件</String>
+    <String Key="Loc.Apps.Col.Process">进程</String>
+    <String Key="Loc.Apps.Col.WindowTitle">窗口标题</String>
+    <String Key="Loc.Apps.Col.ProcessPath">路径</String>
+    <String Key="Loc.Apps.Close">关闭</String>
+    <String Key="Loc.Apps.UseSelected">使用选中项</String>
+    <String Key="Loc.Apps.Category.All">全部分类</String>
+    <String Key="Loc.Apps.Category.Uncategorized">未分类</String>
+    <String Key="Loc.Apps.Category.Development">开发工具</String>
+    <String Key="Loc.Apps.Category.Browser">浏览器</String>
+    <String Key="Loc.Apps.Category.Game">游戏</String>
+    <String Key="Loc.Apps.Category.Communication">通讯</String>
+    <String Key="Loc.Apps.Category.Media">影音</String>
+    <String Key="Loc.Apps.Category.Office">办公</String>
+    <String Key="Loc.Apps.Status.All">全部状态</String>
+    <String Key="Loc.Apps.Status.Enabled">已启用</String>
+    <String Key="Loc.Apps.Status.Disabled">已停用</String>
+    <String Key="Loc.Apps.Mode.Effective">有效统计</String>
+    <String Key="Loc.Apps.Mode.Foreground">前台</String>
+    <String Key="Loc.Apps.Mode.Running">运行</String>
+
+    <!-- 时间记录页 -->
+    <String Key="Loc.Timeline.Title">时间记录</String>
+    <String Key="Loc.Timeline.Subtitle">查看、补录和修正原始活动会话</String>
+    <String Key="Loc.Timeline.ExportCsv">导出 CSV</String>
+    <String Key="Loc.Timeline.ClearDay">清除当日</String>
+    <String Key="Loc.Timeline.Add">+ 补录</String>
+    <String Key="Loc.Timeline.Col.Date">日期</String>
+    <String Key="Loc.Timeline.Col.Time">时间</String>
+    <String Key="Loc.Timeline.Col.App">软件</String>
+    <String Key="Loc.Timeline.Col.Duration">时长</String>
+    <String Key="Loc.Timeline.Col.Source">来源</String>
+    <String Key="Loc.Timeline.Merge">与上一条合并</String>
+    <String Key="Loc.Timeline.MarkIdle">标记为空闲</String>
+    <String Key="Loc.Timeline.EditTitle">编辑时间记录</String>
+    <String Key="Loc.Timeline.Field.App">软件</String>
+    <String Key="Loc.Timeline.Field.Start">开始时间</String>
+    <String Key="Loc.Timeline.Field.End">结束时间</String>
+    <String Key="Loc.Timeline.Field.Notes">备注</String>
+    <String Key="Loc.Timeline.DeletedApp">已删除软件</String>
+    <String Key="Loc.Timeline.Manual">手动</String>
+    <String Key="Loc.Timeline.CsvFilter">CSV 文件|*.csv</String>
+
+    <!-- 会话结束原因 -->
+    <String Key="Loc.Session.Reason.None">—</String>
+    <String Key="Loc.Session.Reason.WindowChanged">窗口切换</String>
+    <String Key="Loc.Session.Reason.Idle">空闲</String>
+    <String Key="Loc.Session.Reason.Locked">锁屏</String>
+    <String Key="Loc.Session.Reason.Suspended">休眠</String>
+    <String Key="Loc.Session.Reason.Paused">暂停</String>
+    <String Key="Loc.Session.Reason.PrivateMode">隐私模式</String>
+    <String Key="Loc.Session.Reason.Disabled">软件停用</String>
+    <String Key="Loc.Session.Reason.Midnight">跨天</String>
+    <String Key="Loc.Session.Reason.ApplicationExit">应用退出</String>
+    <String Key="Loc.Session.Reason.Recovered">异常恢复</String>
+    <String Key="Loc.Session.Reason.Manual">手动</String>
+
+    <!-- 设置页 -->
+    <String Key="Loc.Settings.Title">设置</String>
+    <String Key="Loc.Settings.Subtitle">调整应用行为、统计规则与数据管理（修改即时生效）</String>
+    <String Key="Loc.Settings.Section.Language">语言</String>
+    <String Key="Loc.Settings.LanguageHint">界面语言，切换即时生效</String>
+    <String Key="Loc.Settings.Section.Startup">启动与后台</String>
+    <String Key="Loc.Settings.AutoStart">开机时自动启动</String>
+    <String Key="Loc.Settings.StartMinimized">启动后最小化</String>
+    <String Key="Loc.Settings.MinimizeToTray">关闭窗口时最小化到托盘</String>
+    <String Key="Loc.Settings.Hotkey">全局快捷键</String>
+    <String Key="Loc.Settings.HotkeyTooltip">点击输入框后按下组合键即可设置，例如 Ctrl+Alt+T</String>
+    <String Key="Loc.Settings.HotkeyCapture">按下组合键…</String>
+    <String Key="Loc.Settings.HotkeyAction">呼出 / 隐藏主窗口</String>
+    <String Key="Loc.Settings.HotkeyHint">点击上方输入框后按下组合键（如 Ctrl+Alt+T）即可自定义；按 Esc 可清空停用。</String>
+    <String Key="Loc.Settings.Section.Tracking">前台有效统计</String>
+    <String Key="Loc.Settings.ExcludeIdle">排除用户空闲时间</String>
+    <String Key="Loc.Settings.IdleThreshold">空闲判定阈值</String>
+    <String Key="Loc.Settings.Minutes">分钟</String>
+    <String Key="Loc.Settings.ShortSwitch">短暂切换合并阈值</String>
+    <String Key="Loc.Settings.Seconds">秒</String>
+    <String Key="Loc.Settings.AutoSave">自动保存间隔</String>
+    <String Key="Loc.Settings.History">历史记录保留</String>
+    <String Key="Loc.Settings.Days">天</String>
+    <String Key="Loc.Settings.Section.Notifications">通知与隐私</String>
+    <String Key="Loc.Settings.Notifications">启用使用提醒与每日摘要</String>
+    <String Key="Loc.Settings.DailySummary">每日摘要时间</String>
+    <String Key="Loc.Settings.Hour">时</String>
+    <String Key="Loc.Settings.DailySummaryHint">分（每天该时刻弹出今日摘要）</String>
+    <String Key="Loc.Settings.SaveWindowTitles">保存窗口标题（可能包含敏感信息）</String>
+    <String Key="Loc.Settings.Theme">主题</String>
+    <String Key="Loc.Settings.Section.Data">数据管理</String>
+    <String Key="Loc.Settings.OpenData">打开数据目录</String>
+    <String Key="Loc.Settings.Backup">创建备份</String>
+    <String Key="Loc.Settings.Restore">恢复备份</String>
+    <String Key="Loc.Settings.Validate">完整性检查</String>
+    <String Key="Loc.Settings.ClearHistory">清除全部历史</String>
+    <String Key="Loc.Settings.AutoSaved">设置已自动保存</String>
+    <String Key="Loc.Settings.BackupSaved">备份已保存：{0}</String>
+    <String Key="Loc.Settings.BackupRestored">备份已恢复，请重新启动应用</String>
+    <String Key="Loc.Settings.ValidateOk">数据完整性检查通过</String>
+    <String Key="Loc.Settings.ValidateIssues">发现 {0} 个数据问题</String>
+    <String Key="Loc.Settings.HistoryCleared">历史会话和修正记录已清除</String>
+    <String Key="Loc.Settings.ChooseBackupDir">选择备份保存目录</String>
+    <String Key="Loc.Settings.BackupFilter">AppUsageTracker 备份|*.zip</String>
+
+    <!-- 系统托盘 -->
+    <String Key="Loc.Tray.Tooltip">软件使用时长统计</String>
+    <String Key="Loc.Tray.Show">显示主窗口</String>
+    <String Key="Loc.Tray.Pause">暂停监听</String>
+    <String Key="Loc.Tray.Resume">继续监听</String>
+    <String Key="Loc.Tray.Private">切换隐私模式</String>
+    <String Key="Loc.Tray.Add">添加当前软件</String>
+    <String Key="Loc.Tray.Exit">退出</String>
+
+    <!-- 使用提醒与每日摘要 -->
+    <String Key="Loc.Notify.ReminderTitle">连续使用提醒</String>
+    <String Key="Loc.Notify.ReminderMessage">你已连续使用 {0} {1} 小时。</String>
+    <String Key="Loc.Notify.SummaryTitle">今日使用摘要</String>
+    <String Key="Loc.Notify.SummaryMessage">今日有效时长 {0}，使用最多：{1}。</String>
+
+    <!-- 单位与图表 -->
+    <String Key="Loc.Unit.Hours">小时</String>
+    <String Key="Loc.Unit.Minutes">分钟</String>
+    <String Key="Loc.Unit.Seconds">秒</String>
+    <String Key="Loc.Unit.Times">次</String>
+    <String Key="Loc.Chart.Unmatched">未匹配软件</String>
+    <String Key="Loc.Chart.MoreItems">其余 {0} 项…</String>
+    <String Key="Loc.Chart.Total">合计 {0}</String>
+</Strings>

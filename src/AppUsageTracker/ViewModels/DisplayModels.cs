@@ -9,17 +9,20 @@ public static class DurationFormatter
     {
         totalSeconds = Math.Max(0, totalSeconds);
         var span = TimeSpan.FromSeconds(totalSeconds);
+        var hours = Services.LocalizationService.T("Loc.Unit.Hours");
+        var minutes = Services.LocalizationService.T("Loc.Unit.Minutes");
+        var seconds = Services.LocalizationService.T("Loc.Unit.Seconds");
         if (span.TotalHours >= 1)
         {
-            return $"{(int)span.TotalHours}小时{span.Minutes:D2}分";
+            return $"{(int)span.TotalHours}{hours}{span.Minutes:D2}{minutes}";
         }
 
         if (span.TotalMinutes >= 1)
         {
-            return $"{span.Minutes}分{span.Seconds:D2}秒";
+            return $"{span.Minutes}{minutes}{span.Seconds:D2}{seconds}";
         }
 
-        return $"{span.Seconds}秒";
+        return $"{span.Seconds}{seconds}";
     }
 
     public static string FormatClock(long totalSeconds)
@@ -28,6 +31,9 @@ public static class DurationFormatter
         return $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{span.Seconds:D2}";
     }
 }
+
+/// <summary>下拉选项：稳定值用于绑定与过滤，标签随界面语言本地化。</summary>
+public sealed record OptionItem(object Value, string Label);
 
 public sealed class AppUsageRow
 {
@@ -69,5 +75,7 @@ public sealed class SessionRow
 
     public string Duration => DurationFormatter.Format(Session.DurationSeconds);
 
-    public string Source => Session.IsManual ? "手动" : Session.EndReason.ToString();
+    public string Source => Session.IsManual
+        ? Services.LocalizationService.T("Loc.Timeline.Manual")
+        : Services.LocalizationService.EndReasonLabel(Session.EndReason);
 }

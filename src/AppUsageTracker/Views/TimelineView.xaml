@@ -12,18 +12,18 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="时间记录" Style="{StaticResource Text.PageTitle}" />
-                <TextBlock Text="查看、补录和修正原始活动会话"
+                <TextBlock Text="{DynamicResource Loc.Timeline.Title}" Style="{StaticResource Text.PageTitle}" />
+                <TextBlock Text="{DynamicResource Loc.Timeline.Subtitle}"
                            Style="{StaticResource Text.Muted}" Margin="0,4,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="‹" Command="{Binding PreviousDayCommand}" />
                 <DatePicker SelectedDate="{Binding SelectedDate}" Margin="8,0" />
                 <Button Content="›" Command="{Binding NextDayCommand}" Margin="0,0,12,0" />
-                <Button Content="导出 CSV" Command="{Binding ExportCsvCommand}" Margin="0,0,8,0" />
-                <Button Content="清除当日" Command="{Binding ClearSelectedDayCommand}"
+                <Button Content="{DynamicResource Loc.Timeline.ExportCsv}" Command="{Binding ExportCsvCommand}" Margin="0,0,8,0" />
+                <Button Content="{DynamicResource Loc.Timeline.ClearDay}" Command="{Binding ClearSelectedDayCommand}"
                         Margin="0,0,8,0" />
-                <Button Content="+ 补录" Command="{Binding AddSessionCommand}"
+                <Button Content="{DynamicResource Loc.Timeline.Add}" Command="{Binding AddSessionCommand}"
                         Style="{StaticResource Button.Primary}" />
             </StackPanel>
         </Grid>
@@ -37,21 +37,21 @@
                 <DataGrid Grid.Row="0" ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}"
                           IsReadOnly="True">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="日期" Binding="{Binding Date}" Width="110" />
-                        <DataGridTextColumn Header="时间" Binding="{Binding TimeRange}" Width="180" />
-                        <DataGridTextColumn Header="软件" Binding="{Binding ApplicationName}" Width="*" />
-                        <DataGridTextColumn Header="时长" Binding="{Binding Duration}" Width="120" />
-                        <DataGridTextColumn Header="来源" Binding="{Binding Source}" Width="120" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Date}" Binding="{Binding Date}" Width="110" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Time}" Binding="{Binding TimeRange}" Width="180" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.App}" Binding="{Binding ApplicationName}" Width="*" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Duration}" Binding="{Binding Duration}" Width="120" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Source}" Binding="{Binding Source}" Width="120" />
                     </DataGrid.Columns>
                 </DataGrid>
                 <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="12">
-                        <Button Content="与上一条合并" Command="{Binding MergeWithPreviousCommand}"
+                        <Button Content="{DynamicResource Loc.Timeline.Merge}" Command="{Binding MergeWithPreviousCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="标记为空闲" Command="{Binding MarkAsIdleCommand}"
+                        <Button Content="{DynamicResource Loc.Timeline.MarkIdle}" Command="{Binding MarkAsIdleCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="编辑" Command="{Binding EditSessionCommand}" Margin="0,0,8,0" />
-                        <Button Content="删除" Command="{Binding DeleteSessionCommand}" />
+                        <Button Content="{DynamicResource Loc.Apps.Edit}" Command="{Binding EditSessionCommand}" Margin="0,0,8,0" />
+                        <Button Content="{DynamicResource Loc.Apps.Delete}" Command="{Binding DeleteSessionCommand}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -62,24 +62,24 @@
             <Border Width="500" Style="{StaticResource Card}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
-                    <TextBlock Text="编辑时间记录" Style="{StaticResource Text.SectionTitle}"
+                    <TextBlock Text="{DynamicResource Loc.Timeline.EditTitle}" Style="{StaticResource Text.SectionTitle}"
                                Margin="0,0,0,14" />
-                    <TextBlock Text="软件" />
+                    <TextBlock Text="{DynamicResource Loc.Timeline.Field.App}" />
                     <ComboBox ItemsSource="{Binding Apps}" SelectedItem="{Binding EditApp}"
                               DisplayMemberPath="Name" Margin="0,5,0,10" />
-                    <TextBlock Text="开始时间" />
+                    <TextBlock Text="{DynamicResource Loc.Timeline.Field.Start}" />
                     <TextBox Text="{Binding EditStart, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
                              Margin="0,5,0,10" />
-                    <TextBlock Text="结束时间" />
+                    <TextBlock Text="{DynamicResource Loc.Timeline.Field.End}" />
                     <TextBox Text="{Binding EditEnd, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
                              Margin="0,5,0,10" />
-                    <TextBlock Text="备注" />
+                    <TextBlock Text="{DynamicResource Loc.Timeline.Field.Notes}" />
                     <TextBox Text="{Binding EditNotes}" Height="60" AcceptsReturn="True"
                              Margin="0,5,0,12" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="取消" Command="{Binding CancelEditorCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.Cancel}" Command="{Binding CancelEditorCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="保存" Command="{Binding SaveEditorCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.Save}" Command="{Binding SaveEditorCommand}"
                                 Style="{StaticResource Button.Primary}" />
                     </StackPanel>
                 </StackPanel>

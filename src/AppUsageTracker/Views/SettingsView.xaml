@@ -9,8 +9,8 @@
             </Grid.RowDefinitions>
             <Grid Grid.Row="0" Margin="0,0,0,18">
                 <StackPanel>
-                    <TextBlock Text="设置" Style="{StaticResource Text.PageTitle}" />
-                    <TextBlock Text="调整应用行为、统计规则与数据管理（修改即时生效）"
+                    <TextBlock Text="{DynamicResource Loc.Settings.Title}" Style="{StaticResource Text.PageTitle}" />
+                    <TextBlock Text="{DynamicResource Loc.Settings.Subtitle}"
                                Style="{StaticResource Text.Muted}" Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
@@ -18,11 +18,34 @@
             <StackPanel Grid.Row="1">
                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="启动与后台" Style="{StaticResource Text.SectionTitle}"
+                        <TextBlock Text="{DynamicResource Loc.Settings.Section.Language}"
+                                   Style="{StaticResource Text.SectionTitle}"
                                    Margin="0,0,0,10" />
-                        <CheckBox Content="开机时自动启动" IsChecked="{Binding AutoStart}" />
-                        <CheckBox Content="启动后最小化" IsChecked="{Binding StartMinimized}" />
-                        <CheckBox Content="关闭窗口时最小化到托盘"
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource Loc.Settings.Section.Language}"
+                                       VerticalAlignment="Center" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding LanguageOptions}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding Language}" />
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.LanguageHint}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       Style="{StaticResource Text.Muted}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Loc.Settings.Section.Startup}" Style="{StaticResource Text.SectionTitle}"
+                                   Margin="0,0,0,10" />
+                        <CheckBox Content="{DynamicResource Loc.Settings.AutoStart}" IsChecked="{Binding AutoStart}" />
+                        <CheckBox Content="{DynamicResource Loc.Settings.StartMinimized}" IsChecked="{Binding StartMinimized}" />
+                        <CheckBox Content="{DynamicResource Loc.Settings.MinimizeToTray}"
                                   IsChecked="{Binding MinimizeToTrayOnClose}" />
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
@@ -30,7 +53,7 @@
                                 <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="全局快捷键" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.Hotkey}" VerticalAlignment="Center" />
                             <Grid Grid.Column="1">
                                 <TextBox x:Name="HotkeyBox"
                                          Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}"
@@ -38,7 +61,7 @@
                                          PreviewKeyDown="HotkeyBox_PreviewKeyDown"
                                          GotKeyboardFocus="HotkeyBox_GotKeyboardFocus"
                                          LostKeyboardFocus="HotkeyBox_LostKeyboardFocus"
-                                         ToolTip="点击输入框后按下组合键即可设置，例如 Ctrl+Alt+T">
+                                         ToolTip="{DynamicResource Loc.Settings.HotkeyTooltip}">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox"
                                                BasedOn="{StaticResource {x:Type TextBox}}">
@@ -53,24 +76,24 @@
                                         </Style>
                                     </TextBox.Style>
                                 </TextBox>
-                                <TextBlock x:Name="HotkeyHint" Text="按下组合键…"
+                                <TextBlock x:Name="HotkeyHint" Text="{DynamicResource Loc.Settings.HotkeyCapture}"
                                            Foreground="{DynamicResource Brush.Muted}"
                                            VerticalAlignment="Center" Margin="9,0,0,0"
                                            IsHitTestVisible="False" Visibility="Collapsed" />
                             </Grid>
-                            <TextBlock Grid.Column="2" Text="呼出 / 隐藏主窗口"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.HotkeyAction}"
                                        VerticalAlignment="Center" Margin="8,0,0,0" />
                         </Grid>
-                        <TextBlock Text="点击上方输入框后按下组合键（如 Ctrl+Alt+T）即可自定义；按 Esc 可清空停用。"
+                        <TextBlock Text="{DynamicResource Loc.Settings.HotkeyHint}"
                                    Style="{StaticResource Text.Muted}" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="前台有效统计" Style="{StaticResource Text.SectionTitle}"
+                        <TextBlock Text="{DynamicResource Loc.Settings.Section.Tracking}" Style="{StaticResource Text.SectionTitle}"
                                    Margin="0,0,0,10" />
-                        <CheckBox Content="排除用户空闲时间"
+                        <CheckBox Content="{DynamicResource Loc.Settings.ExcludeIdle}"
                                   IsChecked="{Binding ExcludeIdleTime}" />
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
@@ -78,9 +101,9 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="空闲判定阈值" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.IdleThreshold}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding IdleThresholdMinutes}" />
-                            <TextBlock Grid.Column="2" Text="分钟" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Minutes}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
                         <Grid Margin="0,8,0,0">
@@ -89,9 +112,9 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="短暂切换合并阈值" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.ShortSwitch}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding ShortSwitchSeconds}" />
-                            <TextBlock Grid.Column="2" Text="秒" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Seconds}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
                         <Grid Margin="0,8,0,0">
@@ -100,9 +123,9 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="自动保存间隔" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.AutoSave}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding AutoSaveSeconds}" />
-                            <TextBlock Grid.Column="2" Text="秒" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Seconds}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
                         <Grid Margin="0,8,0,0">
@@ -111,9 +134,9 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="历史记录保留" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.History}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding MaxHistoryDays}" />
-                            <TextBlock Grid.Column="2" Text="天" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Days}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
                     </StackPanel>
@@ -121,9 +144,9 @@
 
                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="通知与隐私" Style="{StaticResource Text.SectionTitle}"
+                        <TextBlock Text="{DynamicResource Loc.Settings.Section.Notifications}" Style="{StaticResource Text.SectionTitle}"
                                    Margin="0,0,0,10" />
-                        <CheckBox Content="启用使用提醒与每日摘要"
+                        <CheckBox Content="{DynamicResource Loc.Settings.Notifications}"
                                   IsChecked="{Binding NotificationsEnabled}" />
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
@@ -133,23 +156,23 @@
                                 <ColumnDefinition Width="60" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="每日摘要时间" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.DailySummary}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding DailySummaryHour}" />
-                            <TextBlock Grid.Column="2" Text="时" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Hour}" VerticalAlignment="Center"
                                        Margin="8,0,12,0" />
                             <TextBox Grid.Column="3" Text="{Binding DailySummaryMinute}" />
-                            <TextBlock Grid.Column="4" Text="分（每天该时刻弹出今日摘要）"
+                            <TextBlock Grid.Column="4" Text="{DynamicResource Loc.Settings.DailySummaryHint}"
                                        VerticalAlignment="Center" Margin="8,0,0,0"
                                        Style="{StaticResource Text.Muted}" />
                         </Grid>
-                        <CheckBox Content="保存窗口标题（可能包含敏感信息）"
+                        <CheckBox Content="{DynamicResource Loc.Settings.SaveWindowTitles}"
                                   IsChecked="{Binding SaveWindowTitles}" />
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="220" />
                                 <ColumnDefinition Width="180" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="主题" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Loc.Settings.Theme}" VerticalAlignment="Center" />
                             <ComboBox Grid.Column="1" ItemsSource="{Binding ThemeOptions}"
                                       SelectedItem="{Binding Theme}" />
                         </Grid>
@@ -158,17 +181,17 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="数据管理" Style="{StaticResource Text.SectionTitle}"
+                        <TextBlock Text="{DynamicResource Loc.Settings.Section.Data}" Style="{StaticResource Text.SectionTitle}"
                                    Margin="0,0,0,10" />
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="打开数据目录" Command="{Binding OpenDataDirectoryCommand}"
+                            <Button Content="{DynamicResource Loc.Settings.OpenData}" Command="{Binding OpenDataDirectoryCommand}"
                                     Margin="0,0,8,0" />
-                            <Button Content="创建备份" Command="{Binding BackupCommand}"
+                            <Button Content="{DynamicResource Loc.Settings.Backup}" Command="{Binding BackupCommand}"
                                     Margin="0,0,8,0" />
-                            <Button Content="恢复备份" Command="{Binding RestoreBackupCommand}"
+                            <Button Content="{DynamicResource Loc.Settings.Restore}" Command="{Binding RestoreBackupCommand}"
                                     Margin="0,0,8,0" />
-                            <Button Content="完整性检查" Command="{Binding ValidateDataCommand}" />
-                            <Button Content="清除全部历史" Command="{Binding ClearHistoryCommand}"
+                            <Button Content="{DynamicResource Loc.Settings.Validate}" Command="{Binding ValidateDataCommand}" />
+                            <Button Content="{DynamicResource Loc.Settings.ClearHistory}" Command="{Binding ClearHistoryCommand}"
                                     Margin="8,0,0,0" Foreground="{DynamicResource Brush.Danger}" />
                         </StackPanel>
                         <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Text.Muted}"

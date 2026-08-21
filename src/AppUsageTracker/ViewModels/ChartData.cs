@@ -48,6 +48,13 @@ public sealed class ChartSlot
     public long TotalSeconds => Values.Values.Sum();
 }
 
+/// <summary>纵轴数值单位：分钟或小时。</summary>
+public enum ChartValueUnit
+{
+    Minutes,
+    Hours,
+}
+
 /// <summary>柱状图的一份完整数据，由 ViewModel 组装后整体赋给控件。</summary>
 public sealed class ChartData
 {
@@ -57,8 +64,8 @@ public sealed class ChartData
 
     public IReadOnlyList<ChartSlot> Slots { get; init; } = [];
 
-    /// <summary>纵轴单位：分钟或小时。</summary>
-    public string ValueUnit { get; init; } = "分钟";
+    /// <summary>纵轴单位，界面按当前语言显示「分钟 / 小时」或「min / h」。</summary>
+    public ChartValueUnit Unit { get; init; } = ChartValueUnit.Minutes;
 
     /// <summary>
     /// 槽位过密时允许的合并倍数。取业务上有意义的整数（分钟刻度、周、月），
@@ -71,5 +78,5 @@ public sealed class ChartData
 
     /// <summary>把秒换算成纵轴单位上的数值。</summary>
     public double ToAxisValue(long seconds) =>
-        ValueUnit == "小时" ? seconds / 3600d : seconds / 60d;
+        Unit == ChartValueUnit.Hours ? seconds / 3600d : seconds / 60d;
 }

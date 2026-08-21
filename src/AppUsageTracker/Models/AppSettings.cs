@@ -25,6 +25,9 @@ public sealed class AppSettings
 
     public string Theme { get; set; } = "System";
 
+    /// <summary>界面语言，取值 zh-CN（中文）或 en-US（English），默认中文。</summary>
+    public string Language { get; set; } = "zh-CN";
+
     public bool NotificationsEnabled { get; set; } = true;
 
     /// <summary>每日摘要通知的触发小时（0-23）。</summary>

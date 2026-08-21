@@ -41,8 +41,11 @@ public sealed class UsageNotificationService : IDisposable
                 _lastAppId = app.Id;
                 _lastNotifiedHour = hour;
                 _tray.ShowNotification(
-                    "连续使用提醒",
-                    $"你已连续使用 {app.Name} {hour} 小时。");
+                    LocalizationService.T("Loc.Notify.ReminderTitle"),
+                    LocalizationService.T(
+                        "Loc.Notify.ReminderMessage",
+                        app.Name,
+                        hour));
             }
         }
 
@@ -63,9 +66,11 @@ public sealed class UsageNotificationService : IDisposable
             {
                 _lastSummaryDate = today;
                 _tray.ShowNotification(
-                    "今日使用摘要",
-                    $"今日有效时长 {ViewModels.DurationFormatter.Format(summary.TotalSeconds)}，" +
-                    $"使用最多：{summary.TopApp?.Name ?? "暂无"}。");
+                    LocalizationService.T("Loc.Notify.SummaryTitle"),
+                    LocalizationService.T(
+                        "Loc.Notify.SummaryMessage",
+                        ViewModels.DurationFormatter.Format(summary.TotalSeconds),
+                        summary.TopApp?.Name ?? LocalizationService.T("Loc.Overview.None")));
             }
         }
     }

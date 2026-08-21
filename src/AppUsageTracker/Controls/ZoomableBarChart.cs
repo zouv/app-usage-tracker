@@ -396,7 +396,10 @@ public sealed class ZoomableBarChart : FrameworkElement
         }
 
         // 纵轴单位标在顶端，省得每个刻度都带单位。
-        var unit = BuildText(data.ValueUnit, 10d, LabelBrush);
+        var unitLabel = data.Unit == ChartValueUnit.Hours
+            ? AppUsageTracker.Services.LocalizationService.T("Loc.Unit.Hours")
+            : AppUsageTracker.Services.LocalizationService.T("Loc.Unit.Minutes");
+        var unit = BuildText(unitLabel, 10d, LabelBrush);
         context.DrawText(unit, new Point(plotLeft - unit.Width - 5, 0));
     }
 
@@ -731,7 +734,7 @@ public sealed class ZoomableBarChart : FrameworkElement
         {
             panel.Children.Add(new TextBlock
             {
-                Text = $"其余 {hidden} 项…",
+                Text = AppUsageTracker.Services.LocalizationService.T("Loc.Chart.MoreItems", hidden),
                 Opacity = 0.7,
                 Margin = new Thickness(0, 2, 0, 0),
             });
@@ -739,7 +742,9 @@ public sealed class ZoomableBarChart : FrameworkElement
 
         panel.Children.Add(new TextBlock
         {
-            Text = $"合计 {DurationFormatter.Format(hit.Totals.Values.Sum())}",
+            Text = AppUsageTracker.Services.LocalizationService.T(
+                "Loc.Chart.Total",
+                DurationFormatter.Format(hit.Totals.Values.Sum())),
             Margin = new Thickness(0, 4, 0, 0),
             Opacity = 0.75,
         });

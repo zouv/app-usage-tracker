@@ -27,6 +27,16 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<string> ThemeOptions { get; } = ["System", "Light", "Dark"];
 
+    /// <summary>语言选项，名称固定用各自语言书写（中文 / English），不随界面语言翻译。</summary>
+    public IReadOnlyList<OptionItem> LanguageOptions { get; } =
+    [
+        new(LocalizationService.Chinese, "中文"),
+        new(LocalizationService.English, "English"),
+    ];
+
+    [ObservableProperty]
+    private string _language = LocalizationService.Chinese;
+
     [ObservableProperty]
     private bool _autoStart;
 
@@ -89,6 +99,7 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnDailySummaryMinuteChanged(int value) => ApplyIfNotLoading();
     partial void OnSaveWindowTitlesChanged(bool value) => ApplyIfNotLoading();
     partial void OnThemeChanged(string value) => ApplyIfNotLoading();
+    partial void OnLanguageChanged(string value) => ApplyIfNotLoading();
 
     [RelayCommand]
     private void OpenDataDirectory()
@@ -103,12 +114,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "选择备份保存目录",
+            Title = LocalizationService.T("Loc.Settings.ChooseBackupDir"),
         };
         if (dialog.ShowDialog() == true)
         {
             var target = await _store.CreateBackupAsync(dialog.FolderName);
-            StatusMessage = $"备份已保存：{target}";
+            StatusMessage = LocalizationService.T("Loc.Settings.BackupSaved", target);
         }
     }
 
@@ -117,12 +128,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "AppUsageTracker 备份|*.zip",
+            Filter = LocalizationService.T("Loc.Settings.BackupFilter"),
         };
         if (dialog.ShowDialog() == true)
         {
             await _store.ImportBackupAsync(dialog.FileName);
-            StatusMessage = "备份已恢复，请重新启动应用";
+            StatusMessage = LocalizationService.T("Loc.Settings.BackupRestored");
         }
     }
 
@@ -131,8 +142,8 @@ public partial class SettingsViewModel : ObservableObject
     {
         var errors = await _store.ValidateAsync();
         StatusMessage = errors.Count == 0
-            ? "数据完整性检查通过"
-            : $"发现 {errors.Count} 个数据问题";
+            ? LocalizationService.T("Loc.Settings.ValidateOk")
+            : LocalizationService.T("Loc.Settings.ValidateIssues", errors.Count);
     }
 
     [RelayCommand]
@@ -143,7 +154,7 @@ public partial class SettingsViewModel : ObservableObject
         _runtime.Corrections.Clear();
         await _runtime.SaveSessionsAndCorrectionsAsync();
         _runtime.NotifyDataChanged();
-        StatusMessage = "历史会话和修正记录已清除";
+        StatusMessage = LocalizationService.T("Loc.Settings.HistoryCleared");
     }
 
     /// <summary>加载期间不触发即时生效，避免逐属性回写。</summary>
@@ -176,12 +187,14 @@ public partial class SettingsViewModel : ObservableObject
         settings.DailySummaryMinute = Math.Clamp(DailySummaryMinute, 0, 59);
         settings.SaveWindowTitles = SaveWindowTitles;
         settings.Theme = Theme;
+        settings.Language = LocalizationService.Normalize(Language);
 
         _startup.SetEnabled(AutoStart);
         ThemeService.Apply(Theme);
+        LocalizationService.Apply(Language);
         App.Current.ApplyHotkey();
         _ = PersistAsync();
-        StatusMessage = "设置已自动保存";
+        StatusMessage = LocalizationService.T("Loc.Settings.AutoSaved");
     }
 
     private async Task PersistAsync()
@@ -217,6 +230,7 @@ public partial class SettingsViewModel : ObservableObject
             DailySummaryMinute = settings.DailySummaryMinute;
             SaveWindowTitles = settings.SaveWindowTitles;
             Theme = settings.Theme;
+            Language = LocalizationService.Normalize(settings.Language);
         }
         finally
         {
