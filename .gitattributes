@@ -1,0 +1,4 @@
+# cmd.exe 对 LF 行尾的批处理文件解析有缺陷（会误拆中文 rem 注释、
+# 把片段当命令执行，报 "is not recognized" / "| was unexpected"），
+# 因此所有 .bat 必须以 CRLF 行尾提交。
+*.bat text eol=crlf

@@ -20,10 +20,16 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => Refresh();
         _timer.Start();
+        LocalizationService.LanguageChanged += OnLanguageChanged;
         Refresh();
     }
 
+    private void OnLanguageChanged(object? sender, EventArgs eventArgs) => Refresh();
+
     public ObservableCollection<AppUsageRow> Ranking { get; } = [];
+
+    [ObservableProperty]
+    private string _todayLabel = string.Empty;
 
     [ObservableProperty]
     private ChartData _timelineChart = ChartData.Empty;
@@ -76,11 +82,15 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     private void Refresh()
     {
         var snapshot = _runtime.Snapshot;
+        TodayLabel = LocalizationService.FullDate(DateTime.Today);
         CurrentAppName = snapshot.CurrentApp?.Name ??
-                         (snapshot.State == ActivityState.Untracked ? "未配置软件" : "暂无活动");
+                         (snapshot.State == ActivityState.Untracked
+                             ? LocalizationService.T("Loc.Overview.Untracked")
+                             : LocalizationService.T("Loc.Overview.NoActivity"));
         CurrentAppInitials = GetInitials(CurrentAppName);
         CurrentStateText = StateText(snapshot.State);
-        PauseButtonText = snapshot.IsPaused ? "继续监听" : "暂停监听";
+        PauseButtonText = LocalizationService.T(
+            snapshot.IsPaused ? "Loc.Overview.Resume" : "Loc.Overview.Pause");
 
         var sessions = BuildLiveSessions();
         var appMap = _runtime.Apps.ToDictionary(app => app.Id);
@@ -90,9 +100,10 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
             sessions,
             _runtime.Apps);
         TodayTotalDuration = DurationFormatter.Format(statistics.TotalSeconds);
-        TopAppName = statistics.TopApp?.Name ?? "暂无";
+        TopAppName = statistics.TopApp?.Name ?? LocalizationService.T("Loc.Overview.None");
         LongestSession = DurationFormatter.Format(statistics.LongestSessionSeconds);
-        SwitchCount = $"{sessions.Count(item => item.EndReason == SessionEndReason.WindowChanged)}次";
+        SwitchCount = $"{sessions.Count(item => item.EndReason == SessionEndReason.WindowChanged)}" +
+                      LocalizationService.T("Loc.Unit.Times");
         var currentAppSeconds = snapshot.CurrentApp is null
             ? 0
             : statistics.Ranking
@@ -153,18 +164,7 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     }
 
     private static string StateText(ActivityState state) =>
-        state switch
-        {
-            ActivityState.Active => "前台活跃",
-            ActivityState.Idle => "用户空闲",
-            ActivityState.Locked => "系统锁屏",
-            ActivityState.Suspended => "系统休眠",
-            ActivityState.Paused => "监听已暂停",
-            ActivityState.Private => "隐私模式",
-            ActivityState.Untracked => "当前软件未配置",
-            ActivityState.Stopped => "监听未启动",
-            _ => state.ToString(),
-        };
+        LocalizationService.ActivityStateLabel(state);
 
     private static void Replace<T>(
         ObservableCollection<T> collection,
@@ -180,6 +180,7 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _timer.Stop();
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
         _runtime.DataChanged -= OnDataChanged;
         _runtime.SnapshotChanged -= OnSnapshotChanged;
     }

@@ -8,6 +8,7 @@
 
 ```text
 App
+ ├─ LocalizationService ── Strings/（嵌入式中英文文案）
  └─ MainWindow
      └─ MainViewModel
          ├─ OverviewViewModel
@@ -34,6 +35,7 @@ AppRuntime（共享单例）
 | --- | --- | --- |
 | 主窗口和导航 | `src/AppUsageTracker/MainWindow.*`、`Themes/`、相关 ViewModel | 数据存储实现 |
 | 主题与配色 | `Services/ThemeService.cs`、`Themes/Palette.*.xaml`、`Themes/Theme.xaml` | 统计与会话逻辑 |
+| 界面语言与文案 | `Services/LocalizationService.cs`、`Strings/Strings.*.xml`、`Converters/LocalizeConverter.cs` | 统计与会话逻辑 |
 | 软件配色与图标 | `Services/AppColorPalette.cs`、`Services/AppIconProvider.cs` | 统计聚合 |
 | 柱状图与缩放 | `Controls/ZoomableBarChart.cs`、`Controls/ChartLegend.cs`、`ViewModels/Chart*.cs` | 持久化实现 |
 | 时间线排版 | `ViewModels/ChartBuilder.cs`、`ViewModels/TimelineLayout.cs`、`Views/OverviewView.xaml` | 持久化实现 |
@@ -71,6 +73,10 @@ AppRuntime（共享单例）
 | `src/AppUsageTracker/Services/GlobalHotkeyService.cs` | 新增 | 全局快捷键注册到主窗口句柄并分发 WM_HOTKEY，托盘隐藏后仍可响应 |
 | `src/AppUsageTracker/Models/HotkeyDefinition.cs` | 新增 | 快捷键字符串与「修饰符 + 虚拟键码」的双向转换 |
 | `src/AppUsageTracker/Themes/Theme.xaml` | 已有 | 公共控件样式，颜色一律 DynamicResource |
+| `src/AppUsageTracker/Services/LocalizationService.cs` | 新增 | 界面语言服务，中英文切换、代码取文案 T()、日期格式与枚举显示名 |
+| `src/AppUsageTracker/Strings/Strings.Chinese.xml` | 新增 | 中文界面字符串（唯一来源，嵌入资源） |
+| `src/AppUsageTracker/Strings/Strings.English.xml` | 新增 | 英文界面字符串，键与中文一一对应 |
+| `src/AppUsageTracker/Converters/LocalizeConverter.cs` | 新增 | 分类/统计模式等模型字段到当前语言显示名的转换 |
 | `src/AppUsageTracker/Themes/Palette.Light.xaml` | 已有 | 浅色调色板，可被整体替换 |
 | `src/AppUsageTracker/Themes/Palette.Dark.xaml` | 已有 | 深色调色板，键与浅色一一对应 |
 | `src/AppUsageTracker/Assets/app.ico` | 已有 | 应用图标，用于 exe、窗口、侧边栏和托盘 |
@@ -85,6 +91,7 @@ AppRuntime（共享单例）
 | --- | --- | --- |
 | 应用壳 | `MainWindow.xaml`、`MainViewModel.cs` | 左侧导航和页面切换 |
 | 主题 | `Services/ThemeService.cs`、`Themes/Palette.*.xaml` | 整体替换调色板字典实现明暗切换 |
+| 界面语言 | `Services/LocalizationService.cs`、`Strings/Strings.*.xml` | 整体替换字符串字典实现中英文切换，代码用 T() 取文案 |
 | 时间线排版 | `ViewModels/ChartBuilder.cs`、`ViewModels/TimelineLayout.cs` | 时间窗对齐、分箱摊分和槽位换算 |
 | 图表控件 | `Controls/ZoomableBarChart.cs`、`Controls/ChartLegend.cs` | 自绘柱状图、缩放平移和图例联动 |
 | 软件配色 | `Services/AppColorPalette.cs` | 8 槽位自动分配，随明暗主题解析显示色 |
@@ -93,8 +100,7 @@ AppRuntime（共享单例）
 | 软件管理 | `Views/AppsView.xaml` | 软件条目增删改查和扫描 |
 | 统计分析 | `Views/StatisticsView.xaml` | 日、周、月、年和累计统计 |
 | 时间记录 | `Views/TimelineView.xaml` | 原始会话查看和修正 |
-| 设置 | `Views/SettingsView.xaml` | 启动、统计、通知和隐私选项 |
-| 前台监听 | `Services/ForegroundWindowMonitor.cs` | Win32 前台窗口变化 |
+| 设置 | `Views/SettingsView.xaml` | 启动、统计、通知和隐私选项 || 前台监听 | `Services/ForegroundWindowMonitor.cs` | Win32 前台窗口变化 |
 | 系统状态 | `Services/IdleStateMonitor.cs`、`SystemSessionMonitor.cs` | 空闲、锁屏和休眠 |
 | 软件匹配 | `Services/ApplicationMatcher.cs` | 路径、进程名和标题匹配 |
 | 会话服务 | `Services/ActivitySessionService.cs` | 开始、结束、心跳和恢复 |
@@ -150,7 +156,16 @@ RegisterHotKey
  -> App.ToggleMainWindow（可见则隐藏、不可见则呼出）
 ```
 
-### 3.5 应用启动与退出
+### 3.5 界面语言切换
+
+```text
+设置页语言下拉（Language 即时生效）
+ -> LocalizationService.Apply
+ -> 整体替换应用资源合并字典第 1 项（Strings.Chinese / Strings.English）
+ -> XAML DynamicResource 自动重绘；LanguageChanged 事件通知 ViewModel 与托盘重算动态文案
+```
+
+### 3.6 应用启动与退出
 
 ```text
 App.OnStartup
@@ -194,6 +209,9 @@ App.ExitApplication
 - 不要把窗口标题写入持久化会话；标题只用于内存匹配。
 - 不要用 `StaticResource` 引用 `Brush.*`；主题切换依赖 `DynamicResource` 才能即时重绘。
 - 不要改动调色板字典在 `App.xaml` 合并字典中的第 0 位；`ThemeService` 按下标整体替换。
+- 不要改动字符串字典在合并字典中的第 1 位（由 `LocalizationService` 启动时插入并整体替换）。
+- 界面文案只加到 `Strings/Strings.Chinese.xml` 与 `Strings/Strings.English.xml`，键一一对应；代码取文案用 `LocalizationService.T`，XAML 用 `{DynamicResource Loc.*}`。
+- 不要在 `Strings/` 里使用带语言标签的文件名（如 `Strings.zh-CN.xml`）；MSBuild 会把它当作卫星资源而不嵌入主程序集。
 - 不要给柱状图的柱子创建可视元素；成百上千个柱段必须走 `OnRender` 直接出几何。
 - 不要把概览页和统计页整体套进 `ScrollViewer`；图表要靠 `*` 行拿到真实高度。
 - 不要在 `AppColorPalette` 里改动槽位顺序或色值；顺序是色觉障碍分离度的保证。

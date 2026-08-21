@@ -16,14 +16,14 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="软件管理" Style="{StaticResource Text.PageTitle}" />
-                <TextBlock Text="仅启用的软件会被纳入时长统计"
+                <TextBlock Text="{DynamicResource Loc.Apps.Title}" Style="{StaticResource Text.PageTitle}" />
+                <TextBlock Text="{DynamicResource Loc.Apps.Subtitle}"
                            Style="{StaticResource Text.Muted}" Margin="0,4,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="扫描运行软件" Command="{Binding ScanProcessesCommand}"
+                <Button Content="{DynamicResource Loc.Apps.Scan}" Command="{Binding ScanProcessesCommand}"
                         Margin="0,0,8,0" />
-                <Button Content="+ 添加软件" Command="{Binding AddNewCommand}"
+                <Button Content="{DynamicResource Loc.Apps.Add}" Command="{Binding AddNewCommand}"
                         Style="{StaticResource Button.Primary}" />
             </StackPanel>
         </Grid>
@@ -36,11 +36,13 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     ToolTip="搜索软件名称、进程或路径" Margin="0,0,10,0" />
+                     ToolTip="{DynamicResource Loc.Apps.SearchTooltip}" Margin="0,0,10,0" />
             <ComboBox Grid.Column="1" ItemsSource="{Binding Categories}"
-                      SelectedItem="{Binding SelectedCategory}" Margin="0,0,10,0" />
+                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding SelectedCategory}" Margin="0,0,10,0" />
             <ComboBox Grid.Column="2" ItemsSource="{Binding StatusOptions}"
-                      SelectedItem="{Binding SelectedStatus}" />
+                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding SelectedStatus}" />
         </Grid>
 
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
@@ -52,7 +54,7 @@
                 <DataGrid Grid.Row="0" ItemsSource="{Binding AppsView}" SelectedItem="{Binding SelectedApp}"
                           IsReadOnly="True">
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="软件" Width="2*">
+                        <DataGridTemplateColumn Header="{DynamicResource Loc.Apps.Col.App}" Width="2*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
@@ -72,24 +74,28 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="120" />
-                        <DataGridTextColumn Header="匹配路径" Binding="{Binding ExecutablePath}" Width="3*" />
-                        <DataGridTextColumn Header="模式" Binding="{Binding TrackingMode}" Width="100" />
-                        <DataGridCheckBoxColumn Header="启用" Binding="{Binding Enabled}" Width="70" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Category}"
+                                            Binding="{Binding Category, Converter={StaticResource Localize}}"
+                                            Width="120" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Path}" Binding="{Binding ExecutablePath}" Width="3*" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Mode}"
+                                            Binding="{Binding TrackingMode, Converter={StaticResource Localize}}"
+                                            Width="100" />
+                        <DataGridCheckBoxColumn Header="{DynamicResource Loc.Apps.Col.Enabled}" Binding="{Binding Enabled}" Width="70" />
                     </DataGrid.Columns>
                 </DataGrid>
 
                 <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="12">
-                        <Button Content="全部启用" Command="{Binding EnableFilteredCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.EnableAll}" Command="{Binding EnableFilteredCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="全部停用" Command="{Binding DisableFilteredCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.DisableAll}" Command="{Binding DisableFilteredCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="启用/停用" Command="{Binding ToggleSelectedCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.Toggle}" Command="{Binding ToggleSelectedCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="编辑" Command="{Binding EditSelectedCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.Edit}" Command="{Binding EditSelectedCommand}"
                                 Margin="0,0,8,0" />
-                        <Button Content="删除" Command="{Binding DeleteSelectedCommand}" />
+                        <Button Content="{DynamicResource Loc.Apps.Delete}" Command="{Binding DeleteSelectedCommand}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -103,11 +109,11 @@
                     <StackPanel>
                         <TextBlock Text="{Binding EditorTitle}" Style="{StaticResource Text.SectionTitle}"
                                    Margin="0,0,0,14" />
-                        <TextBlock Text="软件名称" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.Name}" />
                         <TextBox Text="{Binding EditName}" Margin="0,5,0,10" />
-                        <TextBlock Text="进程名" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.Process}" />
                         <TextBox Text="{Binding EditProcessName}" Margin="0,5,0,10" />
-                        <TextBlock Text="可执行文件路径" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.Path}" />
                         <TextBox Text="{Binding EditExecutablePath}" Margin="0,5,0,10" />
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -115,29 +121,31 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,6,0">
-                                <TextBlock Text="分类" />
+                                <TextBlock Text="{DynamicResource Loc.Apps.Field.Category}" />
                                 <ComboBox ItemsSource="{Binding Categories}"
-                                          SelectedItem="{Binding EditCategory}" Margin="0,5,0,10" />
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding EditCategory}" Margin="0,5,0,10" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                                <TextBlock Text="统计模式" />
+                                <TextBlock Text="{DynamicResource Loc.Apps.Field.Mode}" />
                                 <ComboBox ItemsSource="{Binding TrackingModes}"
-                                          SelectedItem="{Binding EditTrackingMode}" Margin="0,5,0,10" />
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding EditTrackingMode}" Margin="0,5,0,10" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="窗口标题包含（可选）" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.TitleMatch}" />
                         <TextBox Text="{Binding EditWindowTitle}" Margin="0,5,0,10" />
-                        <TextBlock Text="颜色（#RRGGBB）" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.Color}" />
                         <TextBox Text="{Binding EditColorHex}" Margin="0,5,0,10" />
-                        <CheckBox Content="启用监听" IsChecked="{Binding EditEnabled}" />
-                        <CheckBox Content="忽略用户空闲" IsChecked="{Binding EditIgnoreIdle}" />
-                        <TextBlock Text="备注" Margin="0,8,0,0" />
+                        <CheckBox Content="{DynamicResource Loc.Apps.Field.EnableListen}" IsChecked="{Binding EditEnabled}" />
+                        <CheckBox Content="{DynamicResource Loc.Apps.Field.IgnoreIdle}" IsChecked="{Binding EditIgnoreIdle}" />
+                        <TextBlock Text="{DynamicResource Loc.Apps.Field.Notes}" Margin="0,8,0,0" />
                         <TextBox Text="{Binding EditNotes}" AcceptsReturn="True" Height="58"
                                  Margin="0,5,0,12" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="取消" Command="{Binding CancelEditorCommand}"
+                            <Button Content="{DynamicResource Loc.Apps.Cancel}" Command="{Binding CancelEditorCommand}"
                                     Margin="0,0,8,0" />
-                            <Button Content="保存" Command="{Binding SaveEditorCommand}"
+                            <Button Content="{DynamicResource Loc.Apps.Save}" Command="{Binding SaveEditorCommand}"
                                     Style="{StaticResource Button.Primary}" />
                         </StackPanel>
                     </StackPanel>
@@ -156,19 +164,19 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="选择运行中的软件" Style="{StaticResource Text.SectionTitle}" />
+                    <TextBlock Text="{DynamicResource Loc.Apps.SelectRunning}" Style="{StaticResource Text.SectionTitle}" />
                     <DataGrid Grid.Row="1" ItemsSource="{Binding RunningProcesses}"
                               SelectedItem="{Binding SelectedProcess}" IsReadOnly="True"
                               Margin="0,12">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="进程" Binding="{Binding ProcessName}" Width="150" />
-                            <DataGridTextColumn Header="窗口标题" Binding="{Binding WindowTitle}" Width="2*" />
-                            <DataGridTextColumn Header="路径" Binding="{Binding ExecutablePath}" Width="3*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Process}" Binding="{Binding ProcessName}" Width="150" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.WindowTitle}" Binding="{Binding WindowTitle}" Width="2*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.ProcessPath}" Binding="{Binding ExecutablePath}" Width="3*" />
                         </DataGrid.Columns>
                     </DataGrid>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="关闭" Click="OnCloseScan" Margin="0,0,8,0" />
-                        <Button Content="使用选中项" Command="{Binding UseSelectedProcessCommand}"
+                        <Button Content="{DynamicResource Loc.Apps.Close}" Click="OnCloseScan" Margin="0,0,8,0" />
+                        <Button Content="{DynamicResource Loc.Apps.UseSelected}" Command="{Binding UseSelectedProcessCommand}"
                                 Style="{StaticResource Button.Primary}" />
                     </StackPanel>
                 </Grid>

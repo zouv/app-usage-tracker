@@ -26,16 +26,21 @@ public partial class MainViewModel : ObservableObject
         _runtime.SnapshotChanged += (_, snapshot) =>
             App.Current.Dispatcher.Invoke(() =>
             {
-                ListenerStatus = snapshot.State switch
-                {
-                    Models.ActivityState.Paused => "监听已暂停",
-                    Models.ActivityState.Private => "隐私模式",
-                    Models.ActivityState.Stopped => "监听未启动",
-                    _ => "监听运行中",
-                };
+                ListenerStatus = StatusText(snapshot.State);
                 IsPrivateMode = snapshot.IsPrivateMode;
             });
+        LocalizationService.LanguageChanged += (_, _) =>
+            ListenerStatus = StatusText(_runtime.Snapshot.State);
     }
+
+    private static string StatusText(Models.ActivityState state) =>
+        LocalizationService.T(state switch
+        {
+            Models.ActivityState.Paused => "Loc.Status.Paused",
+            Models.ActivityState.Private => "Loc.Status.Private",
+            Models.ActivityState.Stopped => "Loc.Status.Stopped",
+            _ => "Loc.Status.Running",
+        });
 
     public OverviewViewModel Overview { get; }
 
@@ -54,7 +59,7 @@ public partial class MainViewModel : ObservableObject
     private string _selectedPageKey = "Overview";
 
     [ObservableProperty]
-    private string _listenerStatus = "监听运行中";
+    private string _listenerStatus = LocalizationService.T("Loc.Status.Running");
 
     [ObservableProperty]
     private bool _isPrivateMode;

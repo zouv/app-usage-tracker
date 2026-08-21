@@ -1,7 +1,7 @@
 <Window x:Class="AppUsageTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="软件使用时长统计工具"
+        Title="{DynamicResource Loc.App.Title}"
         Width="1200" Height="780"
         MinWidth="960" MinHeight="640"
         Icon="Assets/app.ico"
@@ -36,7 +36,7 @@
                                        FontSize="15" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="概览" Margin="11,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Text="{DynamicResource Loc.Nav.Overview}" Margin="11,0,0,0" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                         </StackPanel>
@@ -48,7 +48,7 @@
                                        FontSize="15" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="软件管理" Margin="11,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Text="{DynamicResource Loc.Nav.Apps}" Margin="11,0,0,0" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                         </StackPanel>
@@ -60,7 +60,7 @@
                                        FontSize="15" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="统计分析" Margin="11,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Text="{DynamicResource Loc.Nav.Statistics}" Margin="11,0,0,0" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                         </StackPanel>
@@ -72,7 +72,7 @@
                                        FontSize="15" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="时间记录" Margin="11,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Text="{DynamicResource Loc.Nav.Timeline}" Margin="11,0,0,0" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                         </StackPanel>
@@ -84,7 +84,7 @@
                                        FontSize="15" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="设置" Margin="11,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Text="{DynamicResource Loc.Nav.Settings}" Margin="11,0,0,0" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground,
                                        RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                         </StackPanel>
@@ -96,7 +96,7 @@
                     <Button Command="{Binding TogglePrivateModeCommand}"
                             Style="{StaticResource Button.Ghost}"
                             HorizontalContentAlignment="Left"
-                            ToolTip="隐私模式期间不记录软件使用">
+                            ToolTip="{DynamicResource Loc.Nav.PrivateModeTooltip}">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="8" Height="8" Fill="{DynamicResource Brush.Success}"
                                      VerticalAlignment="Center" />

@@ -3,7 +3,7 @@
 ## 元数据
 
 - 当前分支：`main`
-- 状态日期：2026-08-20
+- 状态日期：2026-08-21
 - 构建命令：`sh manager.sh build`
 - 测试命令：`sh manager.sh test`
 - 启动命令：`sh manager.sh start`
@@ -13,10 +13,13 @@
 
 无进行中任务。
 
-## 本轮完成（2026-08-20）
+## 注意事项
 
-1. 单实例守卫：`App.xaml.cs` 以命名 Mutex 保证单实例，重复启动时经命名 EventWaitHandle 唤醒首实例主窗口并退出。
-2. 每日摘要时间可配置：`AppSettings.DailySummaryHour/Minute`（默认 18:00），设置页「通知与隐私」即时生效，`UsageNotificationService` 按配置时间触发；新增 7 个阈值单元测试。
-3. 统计分析周期跨 tab 保持：周期 RadioButton 改为 `EnumEqualsConverter` 双向绑定 `SelectedPeriod`，去掉硬编码 IsChecked 与 `SelectPeriodCommand`。
+- 中英文文案的唯一来源是 `src/AppUsageTracker/Strings/Strings.Chinese.xml` 与 `Strings.English.xml`（嵌入资源），键必须一一对应，有本地化测试兜底。**文件名不得带语言标签**（如 `Strings.zh-CN.xml`）：MSBuild 会把 `*.zh-CN.*` 当作卫星资源，既不嵌入主程序集也不会报错，代码侧文案会回退成键名。
+- 软件分类以中文值持久化（`TrackedApp.Category`），英文界面只翻译显示名，不要改动存储值；分类/状态的筛选下拉用「稳定值 + 本地化标签」的 `OptionItem` 绑定，不要直接比较界面文案。
+- 本地化开关会触发全局 `LocalizationService.LanguageChanged`，新增的 ViewModel/服务如需动态文案记得订阅重算；托盘菜单等 WinForms 控件必须在 UI 线程更新（事件本身在 UI 线程同步触发）。**凡是改了被 `CollectionView` 包着的集合（如 `AppsViewModel.Apps`）必须回 Dispatcher 线程**——单元测试里 xUnit 会用不同线程跑不同测试类，跨线程改 CollectionView 会抛 `NotSupportedException`，`ci.bat` 的 Release 测试就曾因此失败；无 `Application` 时直接跳过该 UI 刷新。
 
-验证：build 通过（0 警告）、test 78 通过、check-docs 通过、单实例实跑（二次启动进程数保持 1）。
+## 本轮完成（2026-08-21）
+
+1. 中英文界面切换：`AppSettings.Language`（默认中文）+ 设置页「语言」卡片即时生效；`LocalizationService` 整体替换合并字典第 1 位的字符串字典，XAML 用 `{DynamicResource Loc.*}`、代码用 `T()`；覆盖五个页面、侧边栏、托盘、通知、对话框、时长单位、日期格式与分类/状态/统计模式显示，并新增字典键一致性与时长单位本地化测试。
+2. 图表纵轴单位由字符串「小时/分钟」改为 `ChartValueUnit` 枚举（原实现靠比较中文单位字符串换算轴值），图例与悬浮提示文案同步本地化。

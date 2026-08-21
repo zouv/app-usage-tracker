@@ -10,6 +10,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <!-- 第 0 项是调色板槽位，ThemeService 会整体替换为 Palette.Light / Palette.Dark -->
                 <ResourceDictionary Source="Themes/Palette.Light.xaml" />
+                <!-- 第 1 项是界面字符串槽位，启动时由 LocalizationService 插入 Strings.*.xml 并整体替换 -->
                 <ResourceDictionary Source="Themes/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
@@ -21,6 +22,7 @@
             <converters:NonZeroCountVisibilityConverter x:Key="NonZeroCountVisibility" />
             <converters:ZeroCountVisibilityConverter x:Key="ZeroCountVisibility" />
             <converters:Base64ImageConverter x:Key="Base64Image" />
+            <converters:LocalizeConverter x:Key="Localize" />
 
             <DataTemplate DataType="{x:Type viewModels:OverviewViewModel}">
                 <views:OverviewView />

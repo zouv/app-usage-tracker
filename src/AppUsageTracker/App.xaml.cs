@@ -62,6 +62,7 @@ public partial class App : Application
                 new ProcessScanner());
             await _runtime.InitializeAsync();
             ThemeService.Apply(_runtime.Settings.Theme);
+            LocalizationService.Apply(_runtime.Settings.Language);
 
             var overview = new OverviewViewModel(_runtime);
             var apps = new AppsViewModel(_runtime);
@@ -112,8 +113,8 @@ public partial class App : Application
             Directory.CreateDirectory(errorDirectory);
             File.WriteAllText(Path.Combine(errorDirectory, "startup-error.log"), exception.ToString());
             MessageBox.Show(
-                $"应用初始化失败：{exception.Message}",
-                "软件使用时长统计",
+                LocalizationService.T("Loc.App.InitFailed", exception.Message),
+                LocalizationService.T("Loc.App.InitFailedTitle"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             Shutdown(1);

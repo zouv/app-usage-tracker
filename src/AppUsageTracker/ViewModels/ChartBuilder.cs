@@ -84,7 +84,7 @@ public static class ChartBuilder
 
             var app = session.ApplicationId is { } id ? appMap.GetValueOrDefault(id) : null;
             var key = session.ApplicationId?.ToString("N") ?? "unmatched";
-            names[key] = app?.Name ?? "未匹配软件";
+            names[key] = app?.Name ?? LocalizationService.T("Loc.Chart.Unmatched");
             colors[key] = app?.ColorHex ?? AppColorPalette.NeutralHex;
 
             // 会话的有效时长可能小于墙上时间，按重叠比例等比摊分到各分箱。
@@ -120,7 +120,7 @@ public static class ChartBuilder
         {
             Series = BuildSeries(totals, names, colors),
             Slots = slots,
-            ValueUnit = "分钟",
+            Unit = ChartValueUnit.Minutes,
             GroupingSteps = TimelineGroupingSteps,
         };
     }
@@ -177,8 +177,8 @@ public static class ChartBuilder
             var slot = new ChartSlot
             {
                 Label = label,
-                RangeStart = date.ToDateTime(TimeOnly.MinValue).ToString("yyyy年M月d日 ddd"),
-                RangeEnd = date.ToDateTime(TimeOnly.MinValue).ToString("yyyy年M月d日 ddd"),
+                RangeStart = LocalizationService.FullDateWithWeekday(date.ToDateTime(TimeOnly.MinValue)),
+                RangeEnd = LocalizationService.FullDateWithWeekday(date.ToDateTime(TimeOnly.MinValue)),
             };
             slots[index] = slot;
 
@@ -201,7 +201,7 @@ public static class ChartBuilder
         {
             Series = BuildSeries(totals, names, colors),
             Slots = slots,
-            ValueUnit = "小时",
+            Unit = ChartValueUnit.Hours,
             GroupingSteps = DailyGroupingSteps,
         };
     }
@@ -239,9 +239,9 @@ public static class ChartBuilder
 
         var slots = ordered.Select(pair => new ChartSlot
         {
-            Label = names.GetValueOrDefault(pair.Key) ?? "未匹配软件",
-            RangeStart = names.GetValueOrDefault(pair.Key) ?? "未匹配软件",
-            RangeEnd = names.GetValueOrDefault(pair.Key) ?? "未匹配软件",
+            Label = names.GetValueOrDefault(pair.Key) ?? LocalizationService.T("Loc.Chart.Unmatched"),
+            RangeStart = names.GetValueOrDefault(pair.Key) ?? LocalizationService.T("Loc.Chart.Unmatched"),
+            RangeEnd = names.GetValueOrDefault(pair.Key) ?? LocalizationService.T("Loc.Chart.Unmatched"),
             Values = new Dictionary<string, long> { [pair.Key] = pair.Value },
         }).ToList();
 
@@ -249,7 +249,7 @@ public static class ChartBuilder
         {
             Series = BuildSeries(totals, names, colors),
             Slots = slots,
-            ValueUnit = "小时",
+            Unit = ChartValueUnit.Hours,
             // 按软件绘制时每根柱就是一个软件，绝不允许合并到同一个槽位里。
             GroupingSteps = [1],
         };
@@ -291,8 +291,8 @@ public static class ChartBuilder
             var slot = new ChartSlot
             {
                 Label = labelDate.ToDateTime(TimeOnly.MinValue).ToString("M/d"),
-                RangeStart = $"{current.ToDateTime(TimeOnly.MinValue):yyyy年M月d日} 周",
-                RangeEnd = $"{weekEnd.AddDays(-1).ToDateTime(TimeOnly.MinValue):yyyy年M月d日}",
+                RangeStart = LocalizationService.WeekStartLabel(current.ToDateTime(TimeOnly.MinValue)),
+                RangeEnd = LocalizationService.FullDate(weekEnd.AddDays(-1).ToDateTime(TimeOnly.MinValue)),
             };
             slots.Add(slot);
 
@@ -318,7 +318,7 @@ public static class ChartBuilder
         {
             Series = BuildSeries(totals, names, colors),
             Slots = slots,
-            ValueUnit = "小时",
+            Unit = ChartValueUnit.Hours,
             // 周是本次分箱的最小单位，不再把相邻周合并成半个月。
             GroupingSteps = [1],
         };
@@ -341,7 +341,7 @@ public static class ChartBuilder
             .Select(pair => new ChartSeries
             {
                 Key = pair.Key,
-                Name = names.GetValueOrDefault(pair.Key) ?? "未匹配软件",
+                Name = names.GetValueOrDefault(pair.Key) ?? LocalizationService.T("Loc.Chart.Unmatched"),
                 Color = ParseColor(colors.GetValueOrDefault(pair.Key)),
                 TotalSeconds = pair.Value,
             })
