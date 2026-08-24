@@ -153,9 +153,6 @@ public partial class AppsViewModel : ObservableObject
     private string _editCategory = "未分类";
 
     [ObservableProperty]
-    private string _editColorHex = "#2F6BDE";
-
-    [ObservableProperty]
     private string _editIconBase64 = string.Empty;
 
     [ObservableProperty]
@@ -182,7 +179,6 @@ public partial class AppsViewModel : ObservableObject
         EditProcessName = string.Empty;
         EditExecutablePath = string.Empty;
         EditCategory = "未分类";
-        EditColorHex = "#2F6BDE";
         EditIconBase64 = string.Empty;
         EditTrackingMode = TrackingMode.Effective;
         EditEnabled = true;
@@ -206,7 +202,6 @@ public partial class AppsViewModel : ObservableObject
         EditProcessName = SelectedApp.ProcessName;
         EditExecutablePath = SelectedApp.ExecutablePath;
         EditCategory = SelectedApp.Category;
-        EditColorHex = SelectedApp.ColorHex;
         EditIconBase64 = SelectedApp.IconBase64;
         EditTrackingMode = SelectedApp.TrackingMode;
         EditEnabled = SelectedApp.Enabled;
@@ -241,7 +236,6 @@ public partial class AppsViewModel : ObservableObject
         app.ProcessName = EditProcessName.Trim();
         app.ExecutablePath = EditExecutablePath.Trim();
         app.Category = EditCategory;
-        app.ColorHex = NormalizeColor(EditColorHex);
         app.IconBase64 = EditIconBase64;
         app.TrackingMode = EditTrackingMode;
         app.Enabled = EditEnabled;

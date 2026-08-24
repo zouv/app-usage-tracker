@@ -108,10 +108,11 @@ public partial class StatisticsViewModel : ObservableObject
         StatisticsSnapshot snapshot;
         try
         {
+            var sessions = BuildLiveSessions();
             snapshot = await _runtime.Statistics.BuildAsync(
                 SelectedPeriod,
                 AnchorDate,
-                _runtime.Sessions.ToList(),
+                sessions,
                 _runtime.Apps.ToList(),
                 _refreshCancellation.Token);
         }
@@ -187,6 +188,24 @@ public partial class StatisticsViewModel : ObservableObject
                 ? $"{start:MMM d} - {end.AddDays(-1):MMM d}"
                 : $"{start:M月d日} - {end.AddDays(-1):M月d日}",
         };
+
+    private List<ActivitySession> BuildLiveSessions()
+    {
+        var sessions = _runtime.Sessions.Select(item => item.Clone()).ToList();
+        if (_runtime.Snapshot.CurrentSession is { } current)
+        {
+            var existing = sessions.FirstOrDefault(item => item.Id == current.Id);
+            if (existing is not null)
+            {
+                existing.EndedAtUtc = _runtime.TimeProvider.UtcNow;
+                existing.DurationSeconds = Math.Max(
+                    current.DurationSeconds,
+                    (long)(_runtime.TimeProvider.UtcNow - current.StartedAtUtc).TotalSeconds);
+            }
+        }
+
+        return sessions;
+    }
 
     private static void Replace<T>(
         ObservableCollection<T> collection,
