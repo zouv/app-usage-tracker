@@ -199,10 +199,11 @@
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="© zouv"
-                           Style="{StaticResource Text.Muted}"
-                           HorizontalAlignment="Center"
-                           Margin="0,18,0,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
+                    <TextBlock Text="© zouv" Style="{StaticResource Text.Muted}" />
+                    <TextBlock Text="  ·  v" Style="{StaticResource Text.Muted}" />
+                    <TextBlock x:Name="VersionText" Style="{StaticResource Text.Muted}" />
+                </StackPanel>
             </StackPanel>
         </Grid>
     </ScrollViewer>

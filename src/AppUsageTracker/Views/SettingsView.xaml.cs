@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,6 +11,8 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        VersionText.Text = version is not null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
     }
 
     private void HotkeyBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
