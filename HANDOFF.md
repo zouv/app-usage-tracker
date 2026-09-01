@@ -3,7 +3,7 @@
 ## 元数据
 
 - 当前分支：`main`
-- 状态日期：2026-08-21
+- 状态日期：2026-09-01
 - 构建命令：`sh manager.sh build`
 - 测试命令：`sh manager.sh test`
 - 启动命令：`sh manager.sh start`
@@ -18,6 +18,7 @@
 - 中英文文案的唯一来源是 `src/AppUsageTracker/Strings/Strings.Chinese.xml` 与 `Strings.English.xml`（嵌入资源），键必须一一对应，有本地化测试兜底。**文件名不得带语言标签**（如 `Strings.zh-CN.xml`）：MSBuild 会把 `*.zh-CN.*` 当作卫星资源，既不嵌入主程序集也不会报错，代码侧文案会回退成键名。
 - 软件分类以中文值持久化（`TrackedApp.Category`），英文界面只翻译显示名，不要改动存储值；分类/状态的筛选下拉用「稳定值 + 本地化标签」的 `OptionItem` 绑定，不要直接比较界面文案。
 - 本地化开关会触发全局 `LocalizationService.LanguageChanged`，新增的 ViewModel/服务如需动态文案记得订阅重算；托盘菜单等 WinForms 控件必须在 UI 线程更新（事件本身在 UI 线程同步触发）。**凡是改了被 `CollectionView` 包着的集合（如 `AppsViewModel.Apps`）必须回 Dispatcher 线程**——单元测试里 xUnit 会用不同线程跑不同测试类，跨线程改 CollectionView 会抛 `NotSupportedException`，`ci.bat` 的 Release 测试就曾因此失败；无 `Application` 时直接跳过该 UI 刷新。
+- **日历与下拉框的主题必须显式接线，隐式 Style 不生效**：`DatePicker` 在代码里把内部 `Calendar` 的 Style 绑定到 `DatePicker.CalendarStyle`，`Calendar` 又把 `CalendarDayButtonStyle`/`CalendarButtonStyle` 传给日/月按钮（`CalendarItem` 代码里 `SetBinding(CalendarDayButton.StyleProperty, …)`）。所以只写 `<Style TargetType="CalendarDayButton">` 不会被日按钮采用，必须 `DatePicker.CalendarStyle → Calendar.Style → CalendarItemStyle/CalendarDayButtonStyle/CalendarButtonStyle` 一整条链接上；`ComboBox` 收起框文字垂直居中要显式设 `VerticalContentAlignment="Center"`（默认是 Top，文字会偏上）。
 
 ## 本轮完成（2026-08-21）
 
