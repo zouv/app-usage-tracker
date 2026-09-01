@@ -2,7 +2,7 @@
 
 本项目遵循 Keep a Changelog 和语义化版本。
 
-## [未发布]
+## [1.1.0] - 2026-09-01
 
 ### 新增
 
@@ -13,6 +13,8 @@
 ### 修复
 
 - 统计分析页的周期选择在切换标签页后不再重置为「周」，改为保持上一次选择。
+- 时间记录页日历：日期数字与星期标题真正居中，深色主题下日期、选中与悬停均清晰可见。根因是 DatePicker 在代码里把内部 Calendar 的 Style 绑定到 `CalendarStyle`，而 Calendar 又把自己的 `CalendarDayButtonStyle`/`CalendarButtonStyle` 传给日/月按钮，只写隐式 Style 不生效；现已补全 `Calendar`/`CalendarItem`/`CalendarDayButton`/`CalendarButton` 主题模板并经 `DatePicker.CalendarStyle` 接上。
+- 所有下拉框（ComboBox）选中文字改为垂直居中，不再偏上。
 
 ## [1.0.0] - 2026-08-19
 

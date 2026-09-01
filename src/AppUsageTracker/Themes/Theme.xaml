@@ -142,6 +142,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="8,5" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="MaxDropDownHeight" Value="260" />
         <Setter Property="Template">
@@ -282,29 +284,37 @@
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="MinHeight" Value="34" />
+        <!-- DatePicker 在代码里把内部 Calendar 的 Style 绑定到 CalendarStyle，
+             而 Calendar 又把自己的 *Style 传给日/月按钮，因此必须显式接上。 -->
+        <Setter Property="CalendarStyle" Value="{DynamicResource Calendar.Style}" />
     </Style>
 
-    <Style TargetType="Calendar">
-        <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
-        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
-        <Setter Property="FontSize" Value="12" />
-    </Style>
+    <!-- ============ 日历（DatePicker 弹出层） ============
+         CalendarItem 在代码里为「日按钮 / 月按钮」显式绑定
+         Calendar.CalendarDayButtonStyle / Calendar.CalendarButtonStyle，
+         因此只写隐式 Style 不会作用于日按钮——必须经 Calendar 样式上的
+         CalendarItemStyle / CalendarDayButtonStyle / CalendarButtonStyle 接上。 -->
 
-    <!-- 日期格子：显式把数字居中，避免默认模板在非默认字体下错位。 -->
-    <Style TargetType="CalendarDayButton">
+    <!-- 日期格子：主题画刷 + 显式居中，选中/悬停/今日/非本月各自有清晰状态。 -->
+    <Style x:Key="Calendar.DayButton" TargetType="CalendarDayButton">
+        <Setter Property="MinWidth" Value="26" />
+        <Setter Property="MinHeight" Value="26" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CalendarDayButton">
                     <Grid>
-                        <Border x:Name="HighlightBackground"
+                        <Border x:Name="HoverBackground"
                                 Background="{DynamicResource Brush.SurfaceHover}"
-                                CornerRadius="4" Visibility="Collapsed" />
-                        <Border x:Name="NormalDay" Background="Transparent"
+                                CornerRadius="5" Visibility="Collapsed" />
+                        <Border x:Name="SelectedBackground"
+                                Background="{DynamicResource Brush.Primary}"
+                                CornerRadius="5" Visibility="Collapsed" />
+                        <Border x:Name="TodayBorder" Background="Transparent"
                                 BorderThickness="1" BorderBrush="Transparent"
-                                CornerRadius="4" />
+                                CornerRadius="5" />
                         <ContentControl x:Name="Content"
                                         Content="{TemplateBinding Content}"
                                         HorizontalAlignment="Center"
@@ -314,20 +324,16 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="HighlightBackground" Property="Background"
-                                    Value="{DynamicResource Brush.SurfaceHover}" />
-                            <Setter TargetName="HighlightBackground" Property="Visibility"
+                            <Setter TargetName="HoverBackground" Property="Visibility"
                                     Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="HighlightBackground" Property="Background"
-                                    Value="{DynamicResource Brush.Primary}" />
-                            <Setter TargetName="HighlightBackground" Property="Visibility"
+                            <Setter TargetName="SelectedBackground" Property="Visibility"
                                     Value="Visible" />
                             <Setter TargetName="Content" Property="Foreground" Value="White" />
                         </Trigger>
                         <Trigger Property="IsToday" Value="True">
-                            <Setter TargetName="NormalDay" Property="BorderBrush"
+                            <Setter TargetName="TodayBorder" Property="BorderBrush"
                                     Value="{DynamicResource Brush.Primary}" />
                         </Trigger>
                         <Trigger Property="IsInactive" Value="True">
@@ -343,12 +349,238 @@
         </Setter>
     </Style>
 
-    <!-- 月份切换箭头按钮，透明底、主题文字色。 -->
-    <Style TargetType="CalendarButton">
-        <Setter Property="Background" Value="Transparent" />
+    <!-- 年份/十年视图的月份按钮。 -->
+    <Style x:Key="Calendar.MonthButton" TargetType="CalendarButton">
+        <Setter Property="MinWidth" Value="42" />
+        <Setter Property="MinHeight" Value="30" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-        <Setter Property="MinWidth" Value="24" />
-        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarButton">
+                    <Grid>
+                        <Border x:Name="HoverBackground"
+                                Background="{DynamicResource Brush.SurfaceHover}"
+                                CornerRadius="4" Visibility="Collapsed" />
+                        <Border x:Name="SelectedBackground"
+                                Background="{DynamicResource Brush.Primary}"
+                                CornerRadius="4" Visibility="Collapsed" />
+                        <ContentControl x:Name="Content"
+                                        Content="{TemplateBinding Content}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{TemplateBinding Foreground}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HoverBackground" Property="Visibility"
+                                    Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="HasSelectedDays" Value="True">
+                            <Setter TargetName="SelectedBackground" Property="Visibility"
+                                    Value="Visible" />
+                            <Setter TargetName="Content" Property="Foreground" Value="White" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 弹出层整体模板：替代 Aero2 默认模板，避免其硬编码的深灰前景在暗色下看不清。 -->
+    <Style x:Key="Calendar.Item" TargetType="CalendarItem">
+        <Setter Property="Margin" Value="0,2,0,2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarItem">
+                    <ControlTemplate.Resources>
+                        <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
+                            <TextBlock Text="{Binding}"
+                                       Foreground="{DynamicResource Brush.Muted}"
+                                       FontWeight="SemiBold"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="0,5,0,5" />
+                        </DataTemplate>
+                    </ControlTemplate.Resources>
+                    <Grid x:Name="PART_Root">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button x:Name="PART_PreviousButton"
+                                        Grid.Row="0" Grid.Column="0"
+                                        Focusable="False"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{DynamicResource Brush.Text}"
+                                        Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                        Width="26" Height="26"
+                                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background"
+                                                            Value="{DynamicResource Brush.SurfaceHover}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <Button x:Name="PART_HeaderButton"
+                                        Grid.Row="0" Grid.Column="1"
+                                        Focusable="False"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{DynamicResource Brush.Text}"
+                                        FontWeight="SemiBold" FontSize="13"
+                                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                        Padding="8,3"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background"
+                                                            Value="{DynamicResource Brush.SurfaceHover}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <Button x:Name="PART_NextButton"
+                                        Grid.Row="0" Grid.Column="2"
+                                        Focusable="False"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{DynamicResource Brush.Text}"
+                                        Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                        Width="26" Height="26"
+                                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background"
+                                                            Value="{DynamicResource Brush.SurfaceHover}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <Grid x:Name="PART_MonthView" Grid.Row="1" Grid.ColumnSpan="3"
+                                      Visibility="Visible" Margin="0,3,0,0" HorizontalAlignment="Center">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                </Grid>
+
+                                <Grid x:Name="PART_YearView" Grid.Row="1" Grid.ColumnSpan="3"
+                                      Visibility="Hidden" Margin="0,3,0,0" HorizontalAlignment="Center">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <Rectangle x:Name="PART_DisabledVisual" Opacity="0.5" Visibility="Collapsed"
+                                   Fill="{DynamicResource Brush.Surface}" RadiusX="6" RadiusY="6" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_DisabledVisual" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <DataTrigger Value="Year">
+                            <DataTrigger.Binding>
+                                <Binding Path="DisplayMode">
+                                    <Binding.RelativeSource>
+                                        <RelativeSource Mode="FindAncestor" AncestorType="{x:Type Calendar}" />
+                                    </Binding.RelativeSource>
+                                </Binding>
+                            </DataTrigger.Binding>
+                            <Setter TargetName="PART_MonthView" Property="Visibility" Value="Hidden" />
+                            <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <DataTrigger Value="Decade">
+                            <DataTrigger.Binding>
+                                <Binding Path="DisplayMode">
+                                    <Binding.RelativeSource>
+                                        <RelativeSource Mode="FindAncestor" AncestorType="{x:Type Calendar}" />
+                                    </Binding.RelativeSource>
+                                </Binding>
+                            </DataTrigger.Binding>
+                            <Setter TargetName="PART_MonthView" Property="Visibility" Value="Hidden" />
+                            <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Calendar.Style" TargetType="Calendar">
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CalendarItemStyle" Value="{StaticResource Calendar.Item}" />
+        <Setter Property="CalendarDayButtonStyle" Value="{StaticResource Calendar.DayButton}" />
+        <Setter Property="CalendarButtonStyle" Value="{StaticResource Calendar.MonthButton}" />
     </Style>
 
     <Style TargetType="Separator">
