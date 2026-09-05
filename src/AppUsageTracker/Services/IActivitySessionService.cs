@@ -26,6 +26,11 @@ public interface IActivitySessionService : IDisposable
         ForegroundWindowInfo? window,
         CancellationToken cancellationToken = default);
 
+    /// <summary>心跳时同步当前运行进程列表，驱动「运行」统计模式的会话开始/结束。</summary>
+    Task HandleRunningProcessesAsync(
+        IReadOnlyCollection<RunningProcessInfo> processes,
+        CancellationToken cancellationToken = default);
+
     Task SetIdleAsync(bool isIdle, CancellationToken cancellationToken = default);
 
     Task SetSystemStateAsync(

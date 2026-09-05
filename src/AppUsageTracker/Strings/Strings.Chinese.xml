@@ -122,6 +122,13 @@
     <String Key="Loc.Apps.Mode.Effective">有效统计</String>
     <String Key="Loc.Apps.Mode.Foreground">前台</String>
     <String Key="Loc.Apps.Mode.Running">运行</String>
+    <String Key="Loc.Apps.Mode.EffectiveTip">只有软件窗口在前台且用户没有空闲时才累计时长；最严格，适合衡量"真实在用"的时间（默认）。</String>
+    <String Key="Loc.Apps.Mode.ForegroundTip">只要软件窗口在前台就累计，不管用户是否空闲；适合衡量"窗口占用"的时间。</String>
+    <String Key="Loc.Apps.Mode.RunningTip">只要软件进程在系统中运行就累计，不需要窗口在前台；适合后台持续干活的程序（渲染、下载、编译等）。</String>
+    <String Key="Loc.Apps.Field.EnableListenTip">停用后该软件不再参与任何统计，已记录的历史保留。</String>
+    <String Key="Loc.Apps.Field.IgnoreIdleTip">勾选后，即使鼠标键盘长时间无操作也持续累计该软件时长；仅对「有效统计」模式有意义，「前台」和「运行」模式本来就忽略空闲。</String>
+    <String Key="Loc.Common.Yes">是</String>
+    <String Key="Loc.Common.No">否</String>
 
     <!-- 时间记录页 -->
     <String Key="Loc.Timeline.Title">时间记录</String>

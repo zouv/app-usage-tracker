@@ -7,7 +7,15 @@ namespace AppUsageTracker.Services;
 
 public sealed class ProcessScanner : IProcessScanner
 {
-    public IReadOnlyList<RunningProcessInfo> EnumerateVisibleProcesses()
+    public IReadOnlyList<RunningProcessInfo> EnumerateRunningProcesses() =>
+        EnumerateProcesses(visibleOnly: false, withIcon: false);
+
+    public IReadOnlyList<RunningProcessInfo> EnumerateVisibleProcesses() =>
+        EnumerateProcesses(visibleOnly: true, withIcon: true);
+
+    private static IReadOnlyList<RunningProcessInfo> EnumerateProcesses(
+        bool visibleOnly,
+        bool withIcon)
     {
         var result = new Dictionary<string, RunningProcessInfo>(StringComparer.OrdinalIgnoreCase);
         Process[] processes;
@@ -26,7 +34,7 @@ public sealed class ProcessScanner : IProcessScanner
             {
                 try
                 {
-                    if (process.MainWindowHandle == nint.Zero)
+                    if (visibleOnly && process.MainWindowHandle == nint.Zero)
                     {
                         continue;
                     }
@@ -42,7 +50,7 @@ public sealed class ProcessScanner : IProcessScanner
                             EnsureExe(process.ProcessName),
                             path,
                             process.MainWindowTitle ?? string.Empty,
-                            ReadIcon(path)));
+                            withIcon ? ReadIcon(path) : string.Empty));
                 }
                 catch
                 {

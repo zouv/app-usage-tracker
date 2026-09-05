@@ -15,6 +15,7 @@ public sealed class ActivitySessionService : IActivitySessionService
     private ActivitySession? _currentSession;
     private ForegroundWindowInfo? _currentWindow;
     private TrackedApp? _currentApp;
+    private TrackedApp? _runningApp;
     private long _sessionStartTimestamp;
     private long _sessionBaseDuration;
     private DateTime _lastSaveAtUtc = DateTime.MinValue;
@@ -96,12 +97,25 @@ public sealed class ActivitySessionService : IActivitySessionService
         try
         {
             var matched = window is null ? null : _matcher.Match(window, _apps);
-            var appChanged = matched?.Id != _currentApp?.Id;
             _currentWindow = window;
             _currentApp = matched;
-            await EvaluateStateAsync(
-                appChanged ? SessionEndReason.WindowChanged : SessionEndReason.None,
-                cancellationToken);
+            await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task HandleRunningProcessesAsync(
+        IReadOnlyCollection<RunningProcessInfo> processes,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            _runningApp = _matcher.MatchRunningProcess(processes, _apps);
+            await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
         }
         finally
         {
@@ -232,9 +246,10 @@ public sealed class ActivitySessionService : IActivitySessionService
         CancellationToken cancellationToken)
     {
         var targetState = DetermineState();
+        var activeApp = ResolveActiveApp();
         var activeAppChanged =
             targetState == ActivityState.Active &&
-            _currentSession?.ApplicationId != _currentApp?.Id;
+            _currentSession?.ApplicationId != activeApp?.Id;
         var stateChanged = _currentSession?.State != targetState;
         if (_currentSession is not null &&
             (stateChanged || activeAppChanged ||
@@ -245,9 +260,9 @@ public sealed class ActivitySessionService : IActivitySessionService
                 : endReason);
         }
 
-        if (targetState == ActivityState.Active && _currentSession is null && _currentApp is not null)
+        if (targetState == ActivityState.Active && _currentSession is null && activeApp is not null)
         {
-            StartCurrent(_currentApp);
+            StartCurrent(activeApp);
         }
         else if (_currentSession is null && ShouldRecordState(targetState))
         {
@@ -257,6 +272,9 @@ public sealed class ActivitySessionService : IActivitySessionService
         Publish(targetState);
         await SaveIfNeededAsync(targetState != ActivityState.Active, cancellationToken);
     }
+
+    /// <summary>前台窗口匹配优先；前台未命中时回落到「运行」模式匹配的进程。</summary>
+    private TrackedApp? ResolveActiveApp() => _currentApp ?? _runningApp;
 
     private ActivityState DetermineState()
     {
@@ -285,15 +303,16 @@ public sealed class ActivitySessionService : IActivitySessionService
             return ActivityState.Suspended;
         }
 
-        if (_currentApp is null)
+        var activeApp = ResolveActiveApp();
+        if (activeApp is null)
         {
             return ActivityState.Untracked;
         }
 
         var shouldExcludeIdle =
-            _currentApp.TrackingMode == TrackingMode.Effective &&
+            activeApp.TrackingMode == TrackingMode.Effective &&
             _settings.ExcludeIdleTime &&
-            !_currentApp.IgnoreIdle;
+            !activeApp.IgnoreIdle;
         if (_isIdle && shouldExcludeIdle)
         {
             return ActivityState.Idle;
@@ -479,7 +498,7 @@ public sealed class ActivitySessionService : IActivitySessionService
     {
         Snapshot = new TrackingSnapshot(
             state,
-            _currentApp,
+            ResolveActiveApp(),
             _currentWindow,
             _currentSession?.Clone(),
             _isPaused,

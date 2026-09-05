@@ -108,9 +108,15 @@ public partial class AppsViewModel : ObservableObject
 
     private static IReadOnlyList<OptionItem> BuildTrackingModeOptions() =>
     [
-        new(TrackingMode.Effective, LocalizationService.T("Loc.Apps.Mode.Effective")),
-        new(TrackingMode.Foreground, LocalizationService.T("Loc.Apps.Mode.Foreground")),
-        new(TrackingMode.Running, LocalizationService.T("Loc.Apps.Mode.Running")),
+        new(TrackingMode.Effective,
+            LocalizationService.T("Loc.Apps.Mode.Effective"),
+            LocalizationService.T("Loc.Apps.Mode.EffectiveTip")),
+        new(TrackingMode.Foreground,
+            LocalizationService.T("Loc.Apps.Mode.Foreground"),
+            LocalizationService.T("Loc.Apps.Mode.ForegroundTip")),
+        new(TrackingMode.Running,
+            LocalizationService.T("Loc.Apps.Mode.Running"),
+            LocalizationService.T("Loc.Apps.Mode.RunningTip")),
     ];
 
     [ObservableProperty]

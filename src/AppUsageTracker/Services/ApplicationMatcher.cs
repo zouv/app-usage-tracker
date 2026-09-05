@@ -20,6 +20,30 @@ public sealed class ApplicationMatcher : IApplicationMatcher
             .FirstOrDefault();
     }
 
+    /// <summary>从正在运行的进程集合里匹配「运行」统计模式的软件（忽略窗口标题类规则）。</summary>
+    public TrackedApp? MatchRunningProcess(
+        IReadOnlyCollection<RunningProcessInfo> processes,
+        IReadOnlyCollection<TrackedApp> apps)
+    {
+        if (processes.Count == 0)
+        {
+            return null;
+        }
+
+        return apps
+            .Where(app => app.Enabled && app.TrackingMode == TrackingMode.Running)
+            .Select(app => new
+            {
+                App = app,
+                Score = processes.Max(process => GetProcessScore(app, process)),
+            })
+            .Where(candidate => candidate.Score >= 0)
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenBy(candidate => candidate.App.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.App)
+            .FirstOrDefault();
+    }
+
     private static int GetScore(TrackedApp app, ForegroundWindowInfo window)
     {
         if (app.MatchRules.Any(rule =>
@@ -50,6 +74,39 @@ public sealed class ApplicationMatcher : IApplicationMatcher
                 MatchRuleType.WindowTitleContains => Contains(window.WindowTitle, rule.Pattern),
                 MatchRuleType.WindowTitleRegex => RegexMatches(window.WindowTitle, rule.Pattern),
                 MatchRuleType.ExcludeWindowTitleContains => false,
+                _ => false,
+            };
+
+            if (matched)
+            {
+                score = Math.Max(score, 500 + rule.Priority);
+            }
+        }
+
+        return score;
+    }
+
+    /// <summary>进程级打分：只看可执行路径、进程名和进程类规则，窗口标题类规则不参与。</summary>
+    private static int GetProcessScore(TrackedApp app, RunningProcessInfo process)
+    {
+        var score = -1;
+        if (PathsEqual(app.ExecutablePath, process.ExecutablePath))
+        {
+            score = 1000;
+        }
+
+        if (ProcessNamesEqual(app.ProcessName, process.ProcessName) ||
+            app.RelatedProcessNames.Any(name => ProcessNamesEqual(name, process.ProcessName)))
+        {
+            score = Math.Max(score, 700);
+        }
+
+        foreach (var rule in app.MatchRules)
+        {
+            var matched = rule.Type switch
+            {
+                MatchRuleType.ExecutablePath => PathsEqual(rule.Pattern, process.ExecutablePath),
+                MatchRuleType.ProcessName => ProcessNamesEqual(rule.Pattern, process.ProcessName),
                 _ => false,
             };
 

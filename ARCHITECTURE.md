@@ -41,6 +41,7 @@ AppRuntime（共享单例）
 | 时间线排版 | `ViewModels/ChartBuilder.cs`、`ViewModels/TimelineLayout.cs`、`Views/OverviewView.xaml` | 持久化实现 |
 | 图标与资源 | `tools/generate-icon.ps1`、`Assets/`、`*.csproj` | 业务服务 |
 | 前台监听 | `Services/ForegroundWindowMonitor*`、`Services/ApplicationMatcher*` | 统计页视觉 |
+| 运行模式进程扫描 | `Services/ProcessScanner*`（`EnumerateRunningProcesses`）、`TrackingCoordinator` | 统计页视觉 |
 | 空闲、锁屏、休眠 | `Services/IdleStateMonitor*`、`Services/SystemSessionMonitor*` | 软件管理界面 |
 | 会话与心跳 | `Services/ActivitySessionService*`、`Models/ActivitySession*` | 托盘视觉 |
 | 数据持久化 | `Services/JsonDataStore*`、`Models/` | XAML 页面 |
@@ -102,7 +103,7 @@ AppRuntime（共享单例）
 | 时间记录 | `Views/TimelineView.xaml` | 原始会话查看和修正 |
 | 设置 | `Views/SettingsView.xaml` | 启动、统计、通知和隐私选项 || 前台监听 | `Services/ForegroundWindowMonitor.cs` | Win32 前台窗口变化 |
 | 系统状态 | `Services/IdleStateMonitor.cs`、`SystemSessionMonitor.cs` | 空闲、锁屏和休眠 |
-| 软件匹配 | `Services/ApplicationMatcher.cs` | 路径、进程名和标题匹配 |
+| 软件匹配 | `Services/ApplicationMatcher.cs` | 路径、进程名和标题匹配；进程级匹配（忽略窗口标题规则） |
 | 会话服务 | `Services/ActivitySessionService.cs` | 开始、结束、心跳和恢复 |
 | 持久化 | `Services/JsonDataStore.cs` | 原子保存、备份和恢复 |
 | 统计服务 | `Services/StatisticsService.cs` | 多周期聚合查询 |
@@ -123,6 +124,16 @@ WinEventHook
  -> ActivitySessionService.EndCurrent()
  -> ActivitySessionService.StartMatched()
  -> JsonDataStore
+```
+
+### 3.1b 运行模式进程扫描（心跳驱动）
+
+```text
+TrackingCoordinator.HeartbeatTimer
+ -> IProcessScanner.EnumerateRunningProcesses()
+ -> ApplicationMatcher.MatchRunningProcess()（仅命中 TrackingMode.Running 的软件，忽略窗口标题规则）
+ -> ActivitySessionService.HandleRunningProcessesAsync()
+ -> 前台匹配优先；前台未命中时回落到运行模式软件
 ```
 
 ### 3.2 空闲和系统状态
