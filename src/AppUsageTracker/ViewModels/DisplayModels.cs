@@ -32,8 +32,8 @@ public static class DurationFormatter
     }
 }
 
-/// <summary>下拉选项：稳定值用于绑定与过滤，标签随界面语言本地化。</summary>
-public sealed record OptionItem(object Value, string Label);
+/// <summary>下拉选项：稳定值用于绑定与过滤，标签随界面语言本地化；Tooltip 可选，用于悬停说明。</summary>
+public sealed record OptionItem(object Value, string Label, string? Tooltip = null);
 
 public sealed class AppUsageRow
 {

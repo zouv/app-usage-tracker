@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             PreviewKeyDown="OnPreviewKeyDown">
     <Grid Margin="26,22,26,30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -67,7 +68,13 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <DataGrid Grid.Row="0" ItemsSource="{Binding AppsView}" SelectedItem="{Binding SelectedApp}"
-                          IsReadOnly="True">
+                          IsReadOnly="True"
+                          MouseDoubleClick="OnAppRowDoubleClick">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="ToolTip" Value="{Binding ConfigSummary}" />
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="{DynamicResource Loc.Apps.Col.App}" Width="2*">
                             <DataGridTemplateColumn.CellTemplate>
@@ -143,15 +150,26 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="6,0,0,0">
                                 <TextBlock Text="{DynamicResource Loc.Apps.Field.Mode}" />
-                                <ComboBox ItemsSource="{Binding TrackingModes}"
-                                          DisplayMemberPath="Label" SelectedValuePath="Value"
-                                          SelectedValue="{Binding EditTrackingMode}" Margin="0,5,0,10" />
+                                <ComboBox x:Name="TrackingModeCombo"
+                                          ItemsSource="{Binding TrackingModes}"
+                                          SelectedValuePath="Value"
+                                          SelectedValue="{Binding EditTrackingMode}" Margin="0,5,0,10"
+                                          SelectionChanged="OnTrackingModeChanged"
+                                          Loaded="OnTrackingModeComboLoaded">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" ToolTip="{Binding Tooltip}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </StackPanel>
                         </Grid>
                         <TextBlock Text="{DynamicResource Loc.Apps.Field.TitleMatch}" />
                         <TextBox Text="{Binding EditWindowTitle}" Margin="0,5,0,10" />
-                        <CheckBox Content="{DynamicResource Loc.Apps.Field.EnableListen}" IsChecked="{Binding EditEnabled}" />
-                        <CheckBox Content="{DynamicResource Loc.Apps.Field.IgnoreIdle}" IsChecked="{Binding EditIgnoreIdle}" />
+                        <CheckBox Content="{DynamicResource Loc.Apps.Field.EnableListen}" IsChecked="{Binding EditEnabled}"
+                                  ToolTip="{DynamicResource Loc.Apps.Field.EnableListenTip}" />
+                        <CheckBox Content="{DynamicResource Loc.Apps.Field.IgnoreIdle}" IsChecked="{Binding EditIgnoreIdle}"
+                                  ToolTip="{DynamicResource Loc.Apps.Field.IgnoreIdleTip}" />
                         <TextBlock Text="{DynamicResource Loc.Apps.Field.Notes}" Margin="0,8,0,0" />
                         <TextBox Text="{Binding EditNotes}" AcceptsReturn="True" Height="58"
                                  Margin="0,5,0,12" />

@@ -122,6 +122,13 @@
     <String Key="Loc.Apps.Mode.Effective">Effective</String>
     <String Key="Loc.Apps.Mode.Foreground">Foreground</String>
     <String Key="Loc.Apps.Mode.Running">Running</String>
+    <String Key="Loc.Apps.Mode.EffectiveTip">Counts only while the app's window is in the foreground AND the user is not idle; the strictest mode, best for "actually using it" time (default).</String>
+    <String Key="Loc.Apps.Mode.ForegroundTip">Counts while the app's window is in the foreground, regardless of idle state; best for "window has focus" time.</String>
+    <String Key="Loc.Apps.Mode.RunningTip">Counts as long as the app's process is running, even without a foreground window; best for long-running background work (rendering, downloads, builds).</String>
+    <String Key="Loc.Apps.Field.EnableListenTip">When disabled the app is excluded from all tracking; recorded history is preserved.</String>
+    <String Key="Loc.Apps.Field.IgnoreIdleTip">When checked, the app keeps counting even if the mouse and keyboard are idle for a long time. Only meaningful in "Effective" mode; "Foreground" and "Running" modes already ignore idle.</String>
+    <String Key="Loc.Common.Yes">Yes</String>
+    <String Key="Loc.Common.No">No</String>
 
     <!-- Timeline page -->
     <String Key="Loc.Timeline.Title">Timeline</String>

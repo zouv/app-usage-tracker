@@ -12,7 +12,6 @@
 ## 待办
 
 无进行中任务。
-
 ## 注意事项
 
 - 中英文文案的唯一来源是 `src/AppUsageTracker/Strings/Strings.Chinese.xml` 与 `Strings.English.xml`（嵌入资源），键必须一一对应，有本地化测试兜底。**文件名不得带语言标签**（如 `Strings.zh-CN.xml`）：MSBuild 会把 `*.zh-CN.*` 当作卫星资源，既不嵌入主程序集也不会报错，代码侧文案会回退成键名。

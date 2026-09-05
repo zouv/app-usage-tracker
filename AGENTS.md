@@ -10,6 +10,8 @@
 4. 完成用户可感知功能时更新 `CHANGELOG.md`。
 5. 会话结束或中断前更新 `HANDOFF.md`，确保下一次可以直接续作。
 
+> **任务真正完结时的收尾最容易漏**：只把成果写进 `CHANGELOG.md`、更新接力状态 ≠ 收尾完成——开工时「先写后做」在 `HANDOFF.md` 写下的计划清单（目标、范围、完成定义、下一步），干完必须原地清掉，否则残留计划会和「无进行中任务」的状态自相矛盾、误导下一轮。
+
 ## 2. 技术约束
 
 - 技术栈：C#、.NET 8、WPF、CommunityToolkit.Mvvm 8.3.2。
@@ -103,7 +105,7 @@ sh manager.sh pack
 2. 相关测试通过。
 3. UI 改动完成实跑检查。
 4. `ARCHITECTURE.md` 与代码一致。
-5. `CHANGELOG.md` 和 `HANDOFF.md` 状态正确。
+5. `CHANGELOG.md` 和 `HANDOFF.md` 状态正确：成果已记入 `CHANGELOG.md`；`HANDOFF.md` 已原地清掉本次任务开工时写下的计划清单（当前任务、下一步）等已完成/过期内容，只保留仍在进行中的事项。
 6. `sh check-docs.sh` 通过。
 
 ## 8. 其他

@@ -8,6 +8,7 @@ public sealed class TrackingCoordinator : IDisposable
     private readonly IIdleStateMonitor _idleMonitor;
     private readonly ISystemSessionMonitor _sessionMonitor;
     private readonly IActivitySessionService _activityService;
+    private readonly IProcessScanner _processScanner;
     private readonly Timer _heartbeatTimer;
     private bool _started;
 
@@ -16,12 +17,14 @@ public sealed class TrackingCoordinator : IDisposable
         IIdleStateMonitor idleMonitor,
         ISystemSessionMonitor sessionMonitor,
         IActivitySessionService activityService,
+        IProcessScanner processScanner,
         int heartbeatSeconds)
     {
         _foregroundMonitor = foregroundMonitor;
         _idleMonitor = idleMonitor;
         _sessionMonitor = sessionMonitor;
         _activityService = activityService;
+        _processScanner = processScanner;
         _heartbeatTimer = new Timer(Math.Max(5, heartbeatSeconds) * 1000)
         {
             AutoReset = true,
@@ -29,6 +32,9 @@ public sealed class TrackingCoordinator : IDisposable
         _heartbeatTimer.Elapsed += async (_, _) => await SafeInvokeAsync(
             async cancellationToken =>
             {
+                await _activityService.HandleRunningProcessesAsync(
+                    _processScanner.EnumerateRunningProcesses(),
+                    cancellationToken);
                 await _activityService.SetIdleAsync(CalculateIdleState(), cancellationToken);
                 await _activityService.HeartbeatAsync(cancellationToken);
             });

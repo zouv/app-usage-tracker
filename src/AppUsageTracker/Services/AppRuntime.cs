@@ -34,6 +34,7 @@ public sealed class AppRuntime : IAsyncDisposable
             _idleMonitor,
             SessionMonitor,
             _activityService,
+            processScanner,
             15);
         Statistics = new StatisticsService();
     }
