@@ -131,10 +131,12 @@ WinEventHook
 ```text
 TrackingCoordinator.HeartbeatTimer
  -> IProcessScanner.EnumerateRunningProcesses()
- -> ApplicationMatcher.MatchRunningProcess()（仅命中 TrackingMode.Running 的软件，忽略窗口标题规则）
+ -> ApplicationMatcher.MatchRunningProcess()（返回所有命中 TrackingMode.Running 的软件，忽略窗口标题规则）
  -> ActivitySessionService.HandleRunningProcessesAsync()
- -> 前台匹配优先；前台未命中时回落到运行模式软件
+ -> 前台命中与运行模式软件并行累计：同一软件只计一次，多软件各自独立会话
 ```
+
+多软件并发累计：`ActivitySessionService` 按软件 Id 维护多条进行中的 Active 会话（`_appSessions` 字典），全局状态会话（空闲/锁屏/休眠/暂停/隐私）单独一条。前台命中优先作为快照主显示项，与后台运行软件同时各自累计；锁屏/休眠/暂停/隐私一次性结束全部软件会话。快照 `TrackingSnapshot.ActiveApps` 携带全部活跃软件（含来源模式），`CurrentApp/CurrentSession` 保留为主显示项（供托盘/通知/添加软件等单值消费）。
 
 ### 3.2 空闲和系统状态
 
@@ -207,6 +209,14 @@ App.ExitApplication
 | `EndReason` | WindowChanged、Idle、Locked、Paused 等 |
 | `LastHeartbeatAtUtc` | 异常恢复上界 |
 | `IsManual` | 是否由用户补录或修改 |
+
+### TrackingSnapshot
+
+| 字段 | 规则 |
+| --- | --- |
+| `State` | 全局聚合状态：任一软件活跃即 Active，否则按空闲/锁屏/暂停等 |
+| `ActiveApps` | 全部正在累计的软件（`ActiveAppInfo`：App + Session + 来源 TrackingMode），支持多软件并行 |
+| `CurrentApp` / `CurrentSession` | 主显示项（前台命中优先，否则第一个活跃软件；无软件活跃时 CurrentSession 回退到全局状态会话），供托盘/通知等单值消费 |
 
 ## 5. 高频约束
 

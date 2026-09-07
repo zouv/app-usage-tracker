@@ -66,4 +66,55 @@ public sealed class ApplicationMatcherTests
 
         Assert.Equal(app.Id, _matcher.Match(window, [app])?.Id);
     }
+
+    [Fact]
+    public void MatchRunningProcessReturnsAllRunningModeApps()
+    {
+        var first = new TrackedApp
+        {
+            Name = "DaemonA",
+            ProcessName = "daemon-a.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        var second = new TrackedApp
+        {
+            Name = "DaemonB",
+            ProcessName = "daemon-b.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        // 非运行模式即使进程在跑也不应被返回。
+        var foregroundOnly = new TrackedApp
+        {
+            Name = "Editor",
+            ProcessName = "daemon-a.exe",
+            TrackingMode = TrackingMode.Foreground,
+        };
+        RunningProcessInfo[] processes =
+        [
+            new(1, "daemon-a.exe", string.Empty, string.Empty),
+            new(2, "daemon-b.exe", string.Empty, string.Empty),
+        ];
+
+        var result = _matcher.MatchRunningProcess(processes, [first, second, foregroundOnly]);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, app => app.Id == first.Id);
+        Assert.Contains(result, app => app.Id == second.Id);
+        Assert.DoesNotContain(result, app => app.Id == foregroundOnly.Id);
+    }
+
+    [Fact]
+    public void MatchRunningProcessReturnsEmptyWhenNoProcessMatches()
+    {
+        var app = new TrackedApp
+        {
+            Name = "Daemon",
+            ProcessName = "daemon.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+
+        var result = _matcher.MatchRunningProcess([], [app]);
+
+        Assert.Empty(result);
+    }
 }

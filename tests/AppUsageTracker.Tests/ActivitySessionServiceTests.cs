@@ -191,7 +191,7 @@ public sealed class ActivitySessionServiceTests
     }
 
     [Fact]
-    public async Task ForegroundMatchTakesPriorityOverRunningModeApp()
+    public async Task ForegroundAndRunningAppsAccumulateInParallel()
     {
         var time = new FakeTimeProvider(DateTime.UtcNow);
         var store = new MemoryAppDataStore();
@@ -211,15 +211,146 @@ public sealed class ActivitySessionServiceTests
         await service.StartAsync(new AppDataState { Apps = [runningApp, foregroundApp] });
 
         await service.HandleRunningProcessesAsync([Process("daemon.exe")]);
-        Assert.Equal(runningApp.Id, service.Snapshot.CurrentApp?.Id);
-
-        // 前台命中 Effective 软件后，优先统计前台软件。
         await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
-        Assert.Equal(foregroundApp.Id, service.Snapshot.CurrentApp?.Id);
 
-        // 前台切到未配置软件后，回落到仍在运行的 Running 软件。
-        await service.HandleForegroundWindowAsync(Window("other.exe", 2));
-        Assert.Equal(runningApp.Id, service.Snapshot.CurrentApp?.Id);
+        // 前台软件与后台运行软件同时各自累计。
+        Assert.Equal(2, service.Snapshot.ActiveApps.Count);
+        Assert.Contains(service.Snapshot.ActiveApps, info => info.App.Id == runningApp.Id);
+        Assert.Contains(service.Snapshot.ActiveApps, info => info.App.Id == foregroundApp.Id);
+
+        time.Advance(TimeSpan.FromSeconds(30));
+        await service.HeartbeatAsync();
+
+        Assert.Equal(2, service.Sessions.Count(item => item.EndedAtUtc is null));
+        // 主显示项仍是前台命中的软件。
+        Assert.Equal(foregroundApp.Id, service.Snapshot.CurrentApp?.Id);
+    }
+
+    [Fact]
+    public async Task MultipleRunningModeAppsAccumulateTogether()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        var first = new TrackedApp
+        {
+            Name = "DaemonA",
+            ProcessName = "daemon-a.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        var second = new TrackedApp
+        {
+            Name = "DaemonB",
+            ProcessName = "daemon-b.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState { Apps = [first, second] });
+        await service.HandleForegroundWindowAsync(Window("other.exe", 1));
+
+        await service.HandleRunningProcessesAsync([Process("daemon-a.exe"), Process("daemon-b.exe")]);
+
+        Assert.Equal(2, service.Snapshot.ActiveApps.Count);
+        time.Advance(TimeSpan.FromSeconds(20));
+        await service.HeartbeatAsync();
+
+        // 其中一个进程退出，只结束对应软件会话，另一个继续。
+        await service.HandleRunningProcessesAsync([Process("daemon-b.exe")]);
+
+        var firstSession = service.Sessions.Single(item => item.ApplicationId == first.Id);
+        var secondSession = service.Sessions.Single(item => item.ApplicationId == second.Id);
+        Assert.NotNull(firstSession.EndedAtUtc);
+        Assert.Equal(20, firstSession.DurationSeconds);
+        Assert.Null(secondSession.EndedAtUtc);
+        Assert.Single(service.Snapshot.ActiveApps);
+        Assert.Equal(second.Id, service.Snapshot.ActiveApps[0].App.Id);
+    }
+
+    [Fact]
+    public async Task SameAppForegroundAndRunningKeepsSingleSession()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        // 同一软件既是前台命中、又配置为运行模式：只应产生一条会话。
+        var app = new TrackedApp
+        {
+            Name = "Game",
+            ProcessName = "game.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState { Apps = [app] });
+
+        await service.HandleRunningProcessesAsync([Process("game.exe")]);
+        await service.HandleForegroundWindowAsync(Window("game.exe", 1));
+
+        Assert.Single(service.Snapshot.ActiveApps);
+        Assert.Single(service.Sessions, item => item.ApplicationId == app.Id && item.EndedAtUtc is null);
+    }
+
+    [Fact]
+    public async Task LockingEndsAllActiveAppSessions()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        var runningApp = new TrackedApp
+        {
+            Name = "Daemon",
+            ProcessName = "daemon.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        var foregroundApp = new TrackedApp
+        {
+            Name = "Editor",
+            ProcessName = "editor.exe",
+            TrackingMode = TrackingMode.Effective,
+        };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState { Apps = [runningApp, foregroundApp] });
+        await service.HandleRunningProcessesAsync([Process("daemon.exe")]);
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(10));
+
+        await service.SetSystemStateAsync(SystemSessionState.Locked);
+
+        Assert.Empty(service.Snapshot.ActiveApps);
+        Assert.Equal(ActivityState.Locked, service.Snapshot.State);
+        Assert.All(
+            service.Sessions.Where(item => item.ApplicationId is not null),
+            item => Assert.NotNull(item.EndedAtUtc));
+    }
+
+    [Fact]
+    public async Task IdleEndsOnlyEffectiveAppsNotRunningApps()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        var runningApp = new TrackedApp
+        {
+            Name = "Daemon",
+            ProcessName = "daemon.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        var effectiveApp = new TrackedApp
+        {
+            Name = "Editor",
+            ProcessName = "editor.exe",
+            TrackingMode = TrackingMode.Effective,
+        };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState { Apps = [runningApp, effectiveApp] });
+        await service.HandleRunningProcessesAsync([Process("daemon.exe")]);
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(10));
+
+        await service.SetIdleAsync(true);
+
+        // 有效模式软件被空闲结束，运行模式软件继续累计。
+        var effectiveSession = service.Sessions.Single(item => item.ApplicationId == effectiveApp.Id);
+        var runningSession = service.Sessions.Single(item => item.ApplicationId == runningApp.Id);
+        Assert.NotNull(effectiveSession.EndedAtUtc);
+        Assert.Null(runningSession.EndedAtUtc);
+        Assert.Single(service.Snapshot.ActiveApps);
+        Assert.Equal(runningApp.Id, service.Snapshot.ActiveApps[0].App.Id);
     }
 
     private static RunningProcessInfo Process(string processName) =>

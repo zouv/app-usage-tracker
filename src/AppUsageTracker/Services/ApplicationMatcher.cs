@@ -20,14 +20,14 @@ public sealed class ApplicationMatcher : IApplicationMatcher
             .FirstOrDefault();
     }
 
-    /// <summary>从正在运行的进程集合里匹配「运行」统计模式的软件（忽略窗口标题类规则）。</summary>
-    public TrackedApp? MatchRunningProcess(
+    /// <summary>从正在运行的进程集合里匹配所有「运行」统计模式的软件（忽略窗口标题类规则），按匹配分降序。</summary>
+    public IReadOnlyList<TrackedApp> MatchRunningProcess(
         IReadOnlyCollection<RunningProcessInfo> processes,
         IReadOnlyCollection<TrackedApp> apps)
     {
         if (processes.Count == 0)
         {
-            return null;
+            return [];
         }
 
         return apps
@@ -41,7 +41,7 @@ public sealed class ApplicationMatcher : IApplicationMatcher
             .OrderByDescending(candidate => candidate.Score)
             .ThenBy(candidate => candidate.App.Name, StringComparer.OrdinalIgnoreCase)
             .Select(candidate => candidate.App)
-            .FirstOrDefault();
+            .ToList();
     }
 
     private static int GetScore(TrackedApp app, ForegroundWindowInfo window)

@@ -7,8 +7,7 @@ public sealed class UsageNotificationService : IDisposable
     private readonly AppRuntime _runtime;
     private readonly TrayIconService _tray;
     private readonly Timer _timer = new(TimeSpan.FromMinutes(1));
-    private Guid? _lastAppId;
-    private int _lastNotifiedHour;
+    private readonly Dictionary<Guid, int> _lastNotifiedHourByApp = [];
     private DateOnly? _lastSummaryDate;
 
     public UsageNotificationService(AppRuntime runtime, TrayIconService tray)
@@ -30,21 +29,22 @@ public sealed class UsageNotificationService : IDisposable
         }
 
         var snapshot = _runtime.Snapshot;
-        if (snapshot.CurrentApp is { } app && snapshot.CurrentSession is { } session)
+        // 每个活跃软件各自按整小时提醒一次连续使用。
+        foreach (var info in snapshot.ActiveApps)
         {
             var seconds = Math.Max(
-                session.DurationSeconds,
-                (long)(_runtime.TimeProvider.UtcNow - session.StartedAtUtc).TotalSeconds);
+                info.Session.DurationSeconds,
+                (long)(_runtime.TimeProvider.UtcNow - info.Session.StartedAtUtc).TotalSeconds);
             var hour = (int)(seconds / 3600);
-            if (hour > 0 && (_lastAppId != app.Id || hour > _lastNotifiedHour))
+            var lastHour = _lastNotifiedHourByApp.GetValueOrDefault(info.App.Id);
+            if (hour > 0 && hour > lastHour)
             {
-                _lastAppId = app.Id;
-                _lastNotifiedHour = hour;
+                _lastNotifiedHourByApp[info.App.Id] = hour;
                 _tray.ShowNotification(
                     LocalizationService.T("Loc.Notify.ReminderTitle"),
                     LocalizationService.T(
                         "Loc.Notify.ReminderMessage",
-                        app.Name,
+                        info.App.Name,
                         hour));
             }
         }

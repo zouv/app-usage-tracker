@@ -192,15 +192,16 @@ public partial class StatisticsViewModel : ObservableObject
     private List<ActivitySession> BuildLiveSessions()
     {
         var sessions = _runtime.Sessions.Select(item => item.Clone()).ToList();
-        if (_runtime.Snapshot.CurrentSession is { } current)
+        var now = _runtime.TimeProvider.UtcNow;
+        foreach (var info in _runtime.Snapshot.ActiveApps)
         {
-            var existing = sessions.FirstOrDefault(item => item.Id == current.Id);
+            var existing = sessions.FirstOrDefault(item => item.Id == info.Session.Id);
             if (existing is not null)
             {
-                existing.EndedAtUtc = _runtime.TimeProvider.UtcNow;
+                existing.EndedAtUtc = now;
                 existing.DurationSeconds = Math.Max(
-                    current.DurationSeconds,
-                    (long)(_runtime.TimeProvider.UtcNow - current.StartedAtUtc).TotalSeconds);
+                    info.Session.DurationSeconds,
+                    (long)(now - info.Session.StartedAtUtc).TotalSeconds);
             }
         }
 

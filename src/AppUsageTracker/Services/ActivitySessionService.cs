@@ -12,12 +12,19 @@ public sealed class ActivitySessionService : IActivitySessionService
     private AppSettings _settings = new();
     private List<TrackedApp> _apps = [];
     private readonly List<ActivitySession> _sessions = [];
-    private ActivitySession? _currentSession;
+
+    /// <summary>正在累计的软件会话，按软件 Id 键控；一个软件同一时刻只存在一条。</summary>
+    private readonly Dictionary<Guid, ActivitySession> _appSessions = [];
+
+    /// <summary>全局状态会话（空闲/锁屏/休眠/暂停/隐私），ApplicationId 为空，最多一条。</summary>
+    private ActivitySession? _stateSession;
     private ForegroundWindowInfo? _currentWindow;
     private TrackedApp? _currentApp;
-    private TrackedApp? _runningApp;
-    private long _sessionStartTimestamp;
-    private long _sessionBaseDuration;
+    private IReadOnlyList<TrackedApp> _runningApps = [];
+
+    /// <summary>每个软件会话的单调计时起点与已并入的基础时长。</summary>
+    private readonly Dictionary<Guid, SessionClock> _appClocks = [];
+    private SessionClock _stateClock;
     private DateTime _lastSaveAtUtc = DateTime.MinValue;
     private SystemSessionState _systemState = SystemSessionState.Available;
     private bool _started;
@@ -40,7 +47,7 @@ public sealed class ActivitySessionService : IActivitySessionService
     public event EventHandler<TrackingSnapshot>? SnapshotChanged;
 
     public TrackingSnapshot Snapshot { get; private set; } =
-        new(ActivityState.Stopped, null, null, null, false, false);
+        new(ActivityState.Stopped, null, null, null, false, false, []);
 
     public IReadOnlyList<ActivitySession> Sessions => _sessions;
 
@@ -78,9 +85,9 @@ public sealed class ActivitySessionService : IActivitySessionService
                 return;
             }
 
-            CompleteCurrent(SessionEndReason.ApplicationExit);
+            CompleteAllSessions(SessionEndReason.ApplicationExit);
             _started = false;
-            Publish(ActivityState.Stopped);
+            Publish();
             await SaveIfNeededAsync(true, cancellationToken);
         }
         finally
@@ -114,7 +121,7 @@ public sealed class ActivitySessionService : IActivitySessionService
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            _runningApp = _matcher.MatchRunningProcess(processes, _apps);
+            _runningApps = _matcher.MatchRunningProcess(processes, _apps);
             await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
         }
         finally
@@ -214,12 +221,23 @@ public sealed class ActivitySessionService : IActivitySessionService
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (_currentSession is not null)
+            var now = _timeProvider.UtcNow;
+            foreach (var (appId, session) in _appSessions)
             {
-                UpdateCurrentDuration();
-                _currentSession.LastHeartbeatAtUtc = _timeProvider.UtcNow;
+                UpdateSessionDuration(session, _appClocks[appId]);
+                session.LastHeartbeatAtUtc = now;
+            }
+
+            if (_stateSession is not null)
+            {
+                UpdateSessionDuration(_stateSession, _stateClock);
+                _stateSession.LastHeartbeatAtUtc = now;
+            }
+
+            if (_appSessions.Count > 0 || _stateSession is not null)
+            {
                 _dirty = true;
-                Publish(ActivityState.Active);
+                Publish();
             }
 
             await SaveIfNeededAsync(false, cancellationToken);
@@ -241,42 +259,86 @@ public sealed class ActivitySessionService : IActivitySessionService
         _gate.Dispose();
     }
 
+    /// <summary>全局阻断态（隐私/暂停/锁屏/休眠）优先；否则各软件并行累计，前台命中与运行模式软件共存。</summary>
     private async Task EvaluateStateAsync(
         SessionEndReason endReason,
         CancellationToken cancellationToken)
     {
-        var targetState = DetermineState();
-        var activeApp = ResolveActiveApp();
-        var activeAppChanged =
-            targetState == ActivityState.Active &&
-            _currentSession?.ApplicationId != activeApp?.Id;
-        var stateChanged = _currentSession?.State != targetState;
-        if (_currentSession is not null &&
-            (stateChanged || activeAppChanged ||
-             (endReason == SessionEndReason.WindowChanged && targetState != ActivityState.Active)))
+        var blocking = BlockingState();
+        if (blocking is not null)
         {
-            CompleteCurrent(endReason == SessionEndReason.None
-                ? SessionEndReason.WindowChanged
+            CompleteAllSessions(endReason == SessionEndReason.None
+                ? ReasonForState(blocking.Value)
                 : endReason);
+            StartStateSessionIfNeeded(blocking.Value);
+        }
+        else
+        {
+            CompleteStateSession();
+            var targets = ResolveActiveApps();
+            var targetIds = targets.Select(app => app.Id).ToHashSet();
+
+            // 结束不再活跃（或被空闲排除）的软件会话。
+            foreach (var appId in _appSessions.Keys.ToList())
+            {
+                if (!targetIds.Contains(appId))
+                {
+                    CompleteAppSession(appId, endReason == SessionEndReason.None
+                        ? SessionEndReason.WindowChanged
+                        : endReason);
+                }
+            }
+
+            // 为每个目标软件开新会话（已存在的继续累计）。
+            foreach (var app in targets)
+            {
+                if (!_appSessions.ContainsKey(app.Id))
+                {
+                    StartAppSession(app);
+                }
+            }
+
+            // 没有任何软件仍活跃且处于空闲时，记录一条全局空闲会话。
+            if (targets.Count == 0 && _isIdle)
+            {
+                StartStateSessionIfNeeded(ActivityState.Idle);
+            }
         }
 
-        if (targetState == ActivityState.Active && _currentSession is null && activeApp is not null)
-        {
-            StartCurrent(activeApp);
-        }
-        else if (_currentSession is null && ShouldRecordState(targetState))
-        {
-            StartStateSession(targetState);
-        }
-
-        Publish(targetState);
-        await SaveIfNeededAsync(targetState != ActivityState.Active, cancellationToken);
+        Publish();
+        await SaveIfNeededAsync(_appSessions.Count == 0, cancellationToken);
     }
 
-    /// <summary>前台窗口匹配优先；前台未命中时回落到「运行」模式匹配的进程。</summary>
-    private TrackedApp? ResolveActiveApp() => _currentApp ?? _runningApp;
+    /// <summary>当前应累计的软件集合：前台命中优先，叠加与前台不同 Id 的运行模式软件；同一软件只出现一次。</summary>
+    private List<TrackedApp> ResolveActiveApps()
+    {
+        var result = new List<TrackedApp>();
+        var seen = new HashSet<Guid>();
+        if (_currentApp is not null && !IsExcludedByIdle(_currentApp))
+        {
+            result.Add(_currentApp);
+            seen.Add(_currentApp.Id);
+        }
 
-    private ActivityState DetermineState()
+        foreach (var app in _runningApps)
+        {
+            if (seen.Add(app.Id) && !IsExcludedByIdle(app))
+            {
+                result.Add(app);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>仅「有效」模式且开启排除空闲、未忽略空闲的软件受空闲影响。</summary>
+    private bool IsExcludedByIdle(TrackedApp app) =>
+        _isIdle &&
+        app.TrackingMode == TrackingMode.Effective &&
+        _settings.ExcludeIdleTime &&
+        !app.IgnoreIdle;
+
+    private ActivityState? BlockingState()
     {
         if (!_started)
         {
@@ -303,28 +365,13 @@ public sealed class ActivitySessionService : IActivitySessionService
             return ActivityState.Suspended;
         }
 
-        var activeApp = ResolveActiveApp();
-        if (activeApp is null)
-        {
-            return ActivityState.Untracked;
-        }
-
-        var shouldExcludeIdle =
-            activeApp.TrackingMode == TrackingMode.Effective &&
-            _settings.ExcludeIdleTime &&
-            !activeApp.IgnoreIdle;
-        if (_isIdle && shouldExcludeIdle)
-        {
-            return ActivityState.Idle;
-        }
-
-        return ActivityState.Active;
+        return null;
     }
 
-    private void StartCurrent(TrackedApp app)
+    private void StartAppSession(TrackedApp app)
     {
         var now = _timeProvider.UtcNow;
-        _sessionStartTimestamp = _timeProvider.GetTimestamp();
+        var timestamp = _timeProvider.GetTimestamp();
         var mergeThreshold = TimeSpan.FromSeconds(Math.Max(0, _settings.ShortSwitchSeconds));
         var previous = _sessions
             .Where(item =>
@@ -352,69 +399,100 @@ public sealed class ActivitySessionService : IActivitySessionService
                 previous.EndedAtUtc = null;
                 previous.EndReason = SessionEndReason.None;
                 previous.LastHeartbeatAtUtc = now;
-                _currentSession = previous;
-                _sessionBaseDuration = previous.DurationSeconds;
+                _appSessions[app.Id] = previous;
+                _appClocks[app.Id] = new SessionClock(timestamp, previous.DurationSeconds);
                 _dirty = true;
                 return;
             }
         }
 
-        _sessionBaseDuration = 0;
-        _currentSession = new ActivitySession
+        var session = new ActivitySession
         {
             ApplicationId = app.Id,
             StartedAtUtc = now,
             LastHeartbeatAtUtc = now,
             State = ActivityState.Active,
         };
-        _sessions.Add(_currentSession);
+        _sessions.Add(session);
+        _appSessions[app.Id] = session;
+        _appClocks[app.Id] = new SessionClock(timestamp, 0);
         _dirty = true;
     }
 
-    private void StartStateSession(ActivityState state)
+    private void StartStateSessionIfNeeded(ActivityState state)
     {
-        var now = _timeProvider.UtcNow;
-        _sessionBaseDuration = 0;
-        _sessionStartTimestamp = _timeProvider.GetTimestamp();
-        _currentSession = new ActivitySession
+        if (!ShouldRecordState(state))
         {
-            StartedAtUtc = now,
-            LastHeartbeatAtUtc = now,
+            return;
+        }
+
+        if (_stateSession?.State == state)
+        {
+            return;
+        }
+
+        CompleteStateSession();
+        _stateClock = new SessionClock(_timeProvider.GetTimestamp(), 0);
+        _stateSession = new ActivitySession
+        {
+            StartedAtUtc = _timeProvider.UtcNow,
+            LastHeartbeatAtUtc = _timeProvider.UtcNow,
             State = state,
         };
-        _sessions.Add(_currentSession);
+        _sessions.Add(_stateSession);
         _dirty = true;
     }
 
-    private void CompleteCurrent(SessionEndReason reason)
+    private void CompleteAppSession(Guid appId, SessionEndReason reason)
     {
-        if (_currentSession is null)
+        if (!_appSessions.TryGetValue(appId, out var session))
         {
             return;
         }
 
-        UpdateCurrentDuration();
+        UpdateSessionDuration(session, _appClocks[appId]);
         var now = _timeProvider.UtcNow;
-        _currentSession.EndedAtUtc = now;
-        _currentSession.LastHeartbeatAtUtc = now;
-        _currentSession.EndReason = reason;
-        SplitAcrossLocalMidnights(_currentSession);
-        _currentSession = null;
+        session.EndedAtUtc = now;
+        session.LastHeartbeatAtUtc = now;
+        session.EndReason = reason;
+        _appSessions.Remove(appId);
+        _appClocks.Remove(appId);
+        SplitAcrossLocalMidnights(session);
         _dirty = true;
     }
 
-    private void UpdateCurrentDuration()
+    private void CompleteStateSession()
     {
-        if (_currentSession is null)
+        if (_stateSession is null)
         {
             return;
         }
 
+        UpdateSessionDuration(_stateSession, _stateClock);
+        var now = _timeProvider.UtcNow;
+        _stateSession.EndedAtUtc = now;
+        _stateSession.LastHeartbeatAtUtc = now;
+        _stateSession = null;
+        _dirty = true;
+    }
+
+    private void CompleteAllSessions(SessionEndReason reason)
+    {
+        foreach (var appId in _appSessions.Keys.ToList())
+        {
+            CompleteAppSession(appId, reason);
+        }
+
+        CompleteStateSession();
+    }
+
+    private void UpdateSessionDuration(ActivitySession session, SessionClock clock)
+    {
         var elapsed = _timeProvider.GetElapsedSeconds(
-            _sessionStartTimestamp,
+            clock.StartTimestamp,
             _timeProvider.GetTimestamp());
-        _currentSession.DurationSeconds =
-            _sessionBaseDuration + Math.Max(0, (long)Math.Floor(elapsed));
+        session.DurationSeconds =
+            clock.BaseDuration + Math.Max(0, (long)Math.Floor(elapsed));
     }
 
     private void SplitAcrossLocalMidnights(ActivitySession session)
@@ -494,21 +572,79 @@ public sealed class ActivitySessionService : IActivitySessionService
         _dirty = false;
     }
 
-    private void Publish(ActivityState state)
+    private void Publish()
     {
+        var activeApps = _appSessions
+            .Select(pair => BuildActiveAppInfo(pair.Key, pair.Value))
+            .Where(info => info is not null)
+            .Select(info => info!)
+            .OrderByDescending(info => info.App.Id == _currentApp?.Id)
+            .ThenBy(info => info.App.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var primary = activeApps.FirstOrDefault();
+        var state = ComputeSnapshotState(activeApps.Count);
+        // 主显示会话：优先进行中的软件会话；无软件活跃时回退到全局状态会话（空闲/锁屏等）。
+        var primarySession = primary?.Session ?? _stateSession;
         Snapshot = new TrackingSnapshot(
             state,
-            ResolveActiveApp(),
+            primary?.App,
             _currentWindow,
-            _currentSession?.Clone(),
+            primarySession?.Clone(),
             _isPaused,
-            _isPrivateMode);
+            _isPrivateMode,
+            activeApps);
         SnapshotChanged?.Invoke(this, Snapshot);
     }
+
+    private ActiveAppInfo? BuildActiveAppInfo(Guid appId, ActivitySession session)
+    {
+        var app = _apps.FirstOrDefault(item => item.Id == appId);
+        return app is null
+            ? null
+            : new ActiveAppInfo(app, session.Clone(), app.TrackingMode);
+    }
+
+    /// <summary>有任一软件活跃即 Active；否则按全局阻断态或空闲/未跟踪给出聚合状态。</summary>
+    private ActivityState ComputeSnapshotState(int activeCount)
+    {
+        if (activeCount > 0)
+        {
+            return ActivityState.Active;
+        }
+
+        if (BlockingState() is { } blocking)
+        {
+            return blocking;
+        }
+
+        if (!_started)
+        {
+            return ActivityState.Stopped;
+        }
+
+        return _isIdle ? ActivityState.Idle : ActivityState.Untracked;
+    }
+
+    private static SessionEndReason ReasonForState(ActivityState state) => state switch
+    {
+        ActivityState.Locked => SessionEndReason.Locked,
+        ActivityState.Suspended => SessionEndReason.Suspended,
+        ActivityState.Paused => SessionEndReason.Paused,
+        ActivityState.Private => SessionEndReason.PrivateMode,
+        _ => SessionEndReason.None,
+    };
 
     private static bool ShouldRecordState(ActivityState state) =>
         state is ActivityState.Idle
             or ActivityState.Locked
             or ActivityState.Suspended
             or ActivityState.Paused;
+
+    /// <summary>单个会话的单调计时：起点时间戳 + 已并入的基础时长（短切换合并时保留旧时长）。</summary>
+    private readonly struct SessionClock(long startTimestamp, long baseDuration)
+    {
+        public long StartTimestamp { get; } = startTimestamp;
+
+        public long BaseDuration { get; } = baseDuration;
+    }
 }

@@ -28,6 +28,12 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<AppUsageRow> Ranking { get; } = [];
 
+    /// <summary>当前正在累计的活跃软件卡片，可能有多个（前台 + 后台运行模式）。</summary>
+    public ObservableCollection<ActiveAppCard> ActiveApps { get; } = [];
+
+    [ObservableProperty]
+    private bool _hasActiveApps;
+
     [ObservableProperty]
     private string _todayLabel = string.Empty;
 
@@ -38,19 +44,7 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     private string? _highlightedSeriesKey;
 
     [ObservableProperty]
-    private string _currentAppName = "未配置软件";
-
-    [ObservableProperty]
-    private string _currentAppInitials = "--";
-
-    [ObservableProperty]
     private string _currentStateText = "等待监听";
-
-    [ObservableProperty]
-    private string _currentSessionDuration = "00:00:00";
-
-    [ObservableProperty]
-    private string _currentAppTodayDuration = "0秒";
 
     [ObservableProperty]
     private string _todayTotalDuration = "0秒";
@@ -83,11 +77,6 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     {
         var snapshot = _runtime.Snapshot;
         TodayLabel = LocalizationService.FullDate(DateTime.Today);
-        CurrentAppName = snapshot.CurrentApp?.Name ??
-                         (snapshot.State == ActivityState.Untracked
-                             ? LocalizationService.T("Loc.Overview.Untracked")
-                             : LocalizationService.T("Loc.Overview.NoActivity"));
-        CurrentAppInitials = GetInitials(CurrentAppName);
         CurrentStateText = StateText(snapshot.State);
         PauseButtonText = LocalizationService.T(
             snapshot.IsPaused ? "Loc.Overview.Resume" : "Loc.Overview.Pause");
@@ -104,23 +93,11 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
         LongestSession = DurationFormatter.Format(statistics.LongestSessionSeconds);
         SwitchCount = $"{sessions.Count(item => item.EndReason == SessionEndReason.WindowChanged)}" +
                       LocalizationService.T("Loc.Unit.Times");
-        var currentAppSeconds = snapshot.CurrentApp is null
-            ? 0
-            : statistics.Ranking
-                .FirstOrDefault(item => item.ApplicationId == snapshot.CurrentApp.Id)?.Seconds ?? 0;
-        CurrentAppTodayDuration = DurationFormatter.Format(currentAppSeconds);
 
-        if (snapshot.CurrentSession is { } current)
-        {
-            CurrentSessionDuration = DurationFormatter.FormatClock(
-                Math.Max(
-                    current.DurationSeconds,
-                    (long)(_runtime.TimeProvider.UtcNow - current.StartedAtUtc).TotalSeconds));
-        }
-        else
-        {
-            CurrentSessionDuration = "00:00:00";
-        }
+        Replace(
+            ActiveApps,
+            snapshot.ActiveApps.Select(info => BuildCard(info, statistics)));
+        HasActiveApps = ActiveApps.Count > 0;
 
         Replace(
             Ranking,
@@ -137,18 +114,41 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
         TimelineChart = ChartBuilder.BuildTimeline(sessions, _runtime.Apps, DateTime.Today);
     }
 
+    /// <summary>组装一张活跃卡片：来源状态按软件统计模式，连续时长取实时单调时钟，今日时长来自当日统计。</summary>
+    private ActiveAppCard BuildCard(ActiveAppInfo info, StatisticsSnapshot statistics)
+    {
+        var now = _runtime.TimeProvider.UtcNow;
+        var continuousSeconds = Math.Max(
+            info.Session.DurationSeconds,
+            (long)(now - info.Session.StartedAtUtc).TotalSeconds);
+        var todaySeconds = statistics.Ranking
+            .FirstOrDefault(item => item.ApplicationId == info.App.Id)?.Seconds ?? 0;
+        return new ActiveAppCard
+        {
+            ApplicationId = info.App.Id,
+            Name = info.App.Name,
+            Initials = GetInitials(info.App.Name),
+            ColorHex = info.App.ColorHex,
+            Icon = AppIconProvider.Resolve(info.App),
+            StateText = LocalizationService.TrackingModeLabel(info.SourceMode),
+            ContinuousDuration = DurationFormatter.FormatClock(continuousSeconds),
+            TodayDuration = DurationFormatter.Format(todaySeconds),
+        };
+    }
+
     private List<ActivitySession> BuildLiveSessions()
     {
         var sessions = _runtime.Sessions.Select(item => item.Clone()).ToList();
-        if (_runtime.Snapshot.CurrentSession is { } current)
+        var now = _runtime.TimeProvider.UtcNow;
+        foreach (var info in _runtime.Snapshot.ActiveApps)
         {
-            var existing = sessions.FirstOrDefault(item => item.Id == current.Id);
+            var existing = sessions.FirstOrDefault(item => item.Id == info.Session.Id);
             if (existing is not null)
             {
-                existing.EndedAtUtc = _runtime.TimeProvider.UtcNow;
+                existing.EndedAtUtc = now;
                 existing.DurationSeconds = Math.Max(
-                    current.DurationSeconds,
-                    (long)(_runtime.TimeProvider.UtcNow - current.StartedAtUtc).TotalSeconds);
+                    info.Session.DurationSeconds,
+                    (long)(now - info.Session.StartedAtUtc).TotalSeconds);
             }
         }
 

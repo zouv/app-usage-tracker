@@ -71,15 +71,50 @@ public sealed class ProcessScanner : IProcessScanner
             .ToList();
     }
 
+    /// <summary>
+    /// 取进程可执行文件路径：MainModule 对受保护或 64 位进程会拒绝访问，
+    /// 此时回退到 QueryFullProcessImageName（与前台监听同一套原生封装）。
+    /// </summary>
     private static string TryGetPath(Process process)
     {
         try
         {
-            return process.MainModule?.FileName ?? string.Empty;
+            var path = process.MainModule?.FileName;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
         }
         catch
         {
+            // 进程可能已退出、权限不足或位数不匹配，走原生回退。
+        }
+
+        return QueryPath(process.Id);
+    }
+
+    private static string QueryPath(int processId)
+    {
+        var handle = NativeMethods.OpenProcess(
+            NativeMethods.ProcessQueryLimitedInformation,
+            false,
+            (uint)processId);
+        if (handle == nint.Zero)
+        {
             return string.Empty;
+        }
+
+        try
+        {
+            var size = 32768u;
+            var buffer = new System.Text.StringBuilder((int)size);
+            return NativeMethods.QueryFullProcessImageName(handle, 0, buffer, ref size)
+                ? buffer.ToString()
+                : string.Empty;
+        }
+        finally
+        {
+            NativeMethods.CloseHandle(handle);
         }
     }
 
