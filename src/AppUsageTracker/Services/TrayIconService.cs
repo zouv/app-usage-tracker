@@ -112,7 +112,9 @@ public sealed class TrayIconService : IDisposable
         var duration = snapshot.CurrentSession is null
             ? string.Empty
             : $" {ViewModels.DurationFormatter.FormatClock(snapshot.CurrentSession.DurationSeconds)}";
-        var text = $"时迹 - {app}{duration}";
+        // 多个软件同时累计时，主显示项之外的数量以 +N 提示。
+        var extra = snapshot.ActiveApps.Count > 1 ? $" +{snapshot.ActiveApps.Count - 1}" : string.Empty;
+        var text = $"时迹 - {app}{duration}{extra}";
         _notifyIcon.Text = text.Length <= 63 ? text : text[..63];
         _statusItem.Text = app;
         _pauseItem.Text = LocalizationService.T(

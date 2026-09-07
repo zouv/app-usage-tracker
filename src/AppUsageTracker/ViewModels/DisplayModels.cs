@@ -79,3 +79,33 @@ public sealed class SessionRow
         ? Services.LocalizationService.T("Loc.Timeline.Manual")
         : Services.LocalizationService.EndReasonLabel(Session.EndReason);
 }
+
+/// <summary>概览页「当前活跃软件」横向卡片条里的一张卡片。</summary>
+public sealed class ActiveAppCard
+{
+    public Guid ApplicationId { get; init; }
+
+    public string Name { get; init; } = string.Empty;
+
+    public string Initials { get; init; } = string.Empty;
+
+    public string ColorHex { get; init; } = "#2F6BDE";
+
+    public Brush ColorBrush => new SolidColorBrush(
+        (Color)ColorConverter.ConvertFromString(
+            Services.AppColorPalette.Resolve(ColorHex)));
+
+    /// <summary>软件真实图标；取不到时为 <c>null</c>，界面回退到首字母色块。</summary>
+    public ImageSource? Icon { get; init; }
+
+    public bool HasIcon => Icon is not null;
+
+    /// <summary>按软件统计模式显示的来源状态：有效 / 前台 / 运行。</summary>
+    public string StateText { get; init; } = string.Empty;
+
+    /// <summary>本次连续累计时长（时钟格式）。</summary>
+    public string ContinuousDuration { get; init; } = string.Empty;
+
+    /// <summary>该软件今日累计时长。</summary>
+    public string TodayDuration { get; init; } = string.Empty;
+}

@@ -2,13 +2,20 @@ using AppUsageTracker.Models;
 
 namespace AppUsageTracker.Services;
 
+/// <summary>一个正在累计的活跃软件：软件配置、进行中的会话与触发其累计的来源模式。</summary>
+public sealed record ActiveAppInfo(
+    TrackedApp App,
+    ActivitySession Session,
+    TrackingMode SourceMode);
+
 public sealed record TrackingSnapshot(
     ActivityState State,
     TrackedApp? CurrentApp,
     ForegroundWindowInfo? CurrentWindow,
     ActivitySession? CurrentSession,
     bool IsPaused,
-    bool IsPrivateMode);
+    bool IsPrivateMode,
+    IReadOnlyList<ActiveAppInfo> ActiveApps);
 
 public interface IActivitySessionService : IDisposable
 {

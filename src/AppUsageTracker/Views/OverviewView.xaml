@@ -31,35 +31,91 @@
 
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,14">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="190" />
-                    <ColumnDefinition Width="190" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- 无活跃软件：占位提示 + 全局状态。 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding HasActiveApps,
+                            Converter={StaticResource InverseBoolToVisibility}}">
                     <Border Width="42" Height="42" CornerRadius="7"
                             Background="{DynamicResource Brush.Primary}">
-                        <TextBlock Text="{Binding CurrentAppInitials}" Foreground="White"
+                        <TextBlock Text="--" Foreground="White"
                                    FontWeight="SemiBold" HorizontalAlignment="Center"
                                    VerticalAlignment="Center" />
                     </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding CurrentAppName}" FontSize="16"
+                        <TextBlock Text="{DynamicResource Loc.Overview.NoActivity}" FontSize="16"
                                    FontWeight="SemiBold" />
                         <TextBlock Text="{Binding CurrentStateText}"
                                    Foreground="{DynamicResource Brush.Success}" Margin="0,3,0,0" />
                     </StackPanel>
                 </StackPanel>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource Loc.Overview.ContinuousUse}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding CurrentSessionDuration}" FontSize="20"
-                               Margin="0,4,0,0" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource Loc.Overview.TodayTotal}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding CurrentAppTodayDuration}" FontSize="20"
-                               Margin="0,4,0,0" />
-                </StackPanel>
+
+                <!-- 有活跃软件：横向卡片条，每个活跃软件一张卡，超出可横向滚动。 -->
+                <ScrollViewer VerticalScrollBarVisibility="Disabled"
+                              HorizontalScrollBarVisibility="Auto"
+                              Visibility="{Binding HasActiveApps,
+                              Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl ItemsSource="{Binding ActiveApps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,20,0" Padding="0,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Width="42" Height="42" VerticalAlignment="Center">
+                                            <Border CornerRadius="7"
+                                                    Background="{Binding ColorBrush}"
+                                                    Visibility="{Binding HasIcon,
+                                                    Converter={StaticResource
+                                                    InverseBoolToVisibility}}">
+                                                <TextBlock Text="{Binding Initials}"
+                                                           Foreground="White" FontWeight="SemiBold"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                            <Image Source="{Binding Icon}" Width="38" Height="38"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Visibility="{Binding HasIcon,
+                                                   Converter={StaticResource BoolToVisibility}}" />
+                                        </Grid>
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxWidth="180" />
+                                            <TextBlock Text="{Binding StateText}"
+                                                       Foreground="{DynamicResource Brush.Success}"
+                                                       Margin="0,3,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="28,0,0,0"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource Loc.Overview.ContinuousUse}"
+                                                       Style="{StaticResource Text.Muted}" />
+                                            <TextBlock Text="{Binding ContinuousDuration}" FontSize="20"
+                                                       Margin="0,4,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Margin="28,0,0,0"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource Loc.Overview.TodayTotal}"
+                                                       Style="{StaticResource Text.Muted}" />
+                                            <TextBlock Text="{Binding TodayDuration}" FontSize="20"
+                                                       Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Border>
 
