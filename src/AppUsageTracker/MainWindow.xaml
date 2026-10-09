@@ -2,112 +2,179 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource Loc.App.Title}"
-        Width="1200" Height="780"
-        MinWidth="960" MinHeight="640"
+        Width="1240" Height="800"
+        MinWidth="1024" MinHeight="660"
         Icon="Assets/app.ico"
         Style="{StaticResource AppWindow}"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        ResizeMode="CanResizeWithGrip">
+    <!--
+        自定义标题栏：WindowStyle=None 后用 WindowChrome 保留调整尺寸、
+        贴边布局、最大化动画等系统行为；DWM 圆角在 MainWindow.xaml.cs 启用。
+    -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36"
+                      ResizeBorderThickness="6"
+                      CornerRadius="0"
+                      GlassFrameThickness="0"
+                      UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="188" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <Border Grid.Column="0" Background="{DynamicResource Brush.Sidebar}"
-                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
-            <Grid Margin="12,20,12,14">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="9,0,0,22">
-                    <Image Source="Assets/app.ico" Width="30" Height="30"
+        <!-- ============ 自定义标题栏 ============ -->
+        <Border Grid.Row="0" Background="{DynamicResource Brush.Sidebar}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+            <Grid>
+                <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <Image Source="Assets/app.ico" Width="18" Height="18"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="时迹" FontSize="16" FontWeight="SemiBold"
-                               VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Text="时迹" FontSize="13" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="8,0,0,0" />
                 </StackPanel>
 
-                <StackPanel Grid.Row="1">
-                    <RadioButton Style="{StaticResource NavButton}" IsChecked="True"
-                                 Command="{Binding NavigateCommand}" CommandParameter="Overview">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="15" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="{DynamicResource Loc.Nav.Overview}" Margin="11,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Style="{StaticResource NavButton}"
-                                 Command="{Binding NavigateCommand}" CommandParameter="Apps">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="15" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="{DynamicResource Loc.Nav.Apps}" Margin="11,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Style="{StaticResource NavButton}"
-                                 Command="{Binding NavigateCommand}" CommandParameter="Statistics">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="15" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="{DynamicResource Loc.Nav.Statistics}" Margin="11,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Style="{StaticResource NavButton}"
-                                 Command="{Binding NavigateCommand}" CommandParameter="Timeline">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="15" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="{DynamicResource Loc.Nav.Timeline}" Margin="11,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Style="{StaticResource NavButton}"
-                                 Command="{Binding NavigateCommand}" CommandParameter="Settings">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="15" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            <TextBlock Text="{DynamicResource Loc.Nav.Settings}" Margin="11,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground,
-                                       RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                        </StackPanel>
-                    </RadioButton>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2">
-                    <Separator Margin="0,0,0,12" />
-                    <Button Command="{Binding TogglePrivateModeCommand}"
-                            Style="{StaticResource Button.Ghost}"
-                            HorizontalContentAlignment="Left"
-                            ToolTip="{DynamicResource Loc.Nav.PrivateModeTooltip}">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Brush.Success}"
-                                     VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding ListenerStatus}" Margin="8,0,0,0"
-                                       Foreground="{DynamicResource Brush.Muted}" />
-                        </StackPanel>
+                <!-- 右上窗口控制按钮：命中 WindowChrome.IsHitTestVisibleInChrome 才能收到点击 -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button x:Name="MinimizeButton" Style="{StaticResource Button.Icon}"
+                            Width="42" Height="40" Click="OnMinimizeClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Data="{StaticResource Icon.Minimize}"
+                              Fill="{DynamicResource Brush.Muted}" Stretch="Uniform"
+                              Width="11" Height="11" />
+                    </Button>
+                    <Button x:Name="MaximizeButton" Style="{StaticResource Button.Icon}"
+                            Width="42" Height="40" Click="OnMaximizeClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path x:Name="MaximizeIcon" Data="{StaticResource Icon.Maximize}"
+                              Fill="{DynamicResource Brush.Muted}" Stretch="Uniform"
+                              Width="11" Height="11" />
+                    </Button>
+                    <Button x:Name="CloseButton" Style="{StaticResource Button.WindowClose}"
+                            Click="OnCloseClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Data="{StaticResource Icon.Close}"
+                              Fill="{DynamicResource Brush.Muted}" Stretch="Uniform"
+                              Width="11" Height="11" />
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ContentControl Grid.Column="1" Content="{Binding SelectedPage}" />
+        <!-- ============ 主体：侧边导航 + 页面 ============ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Sidebar}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+                <Grid Margin="10,14,10,14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <RadioButton Style="{StaticResource NavButton}" IsChecked="True"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Overview">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Overview}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Overview}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Apps">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Apps}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Apps}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Statistics">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Statistics}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Statistics}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Timeline">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Timeline}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Timeline}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Settings">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Settings}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Settings}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1">
+                        <Separator Margin="0,0,0,8" />
+                        <Button Command="{Binding TogglePrivateModeCommand}"
+                                Style="{StaticResource Button.Ghost}"
+                                HorizontalContentAlignment="Left"
+                                Padding="12,8"
+                                ToolTip="{DynamicResource Loc.Nav.PrivateModeTooltip}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource Brush.Success}"
+                                         VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding ListenerStatus}" Margin="9,0,0,0"
+                                           FontSize="{StaticResource FontSize.Caption}"
+                                           Foreground="{DynamicResource Brush.Muted}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ContentControl Grid.Column="1" Content="{Binding SelectedPage}" />
+        </Grid>
     </Grid>
 </Window>

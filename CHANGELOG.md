@@ -4,7 +4,38 @@
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-10
+
 ### 修复
+
+- **拖动滚动条拇指方向反了**（1.2.1 回归）：自定义 ScrollBar 模板里 `IsDirectionReversed="False"`，导致拖动拇指时 Track 把「向上」当作「增加」，滚轮方向不受影响所以前一轮自测没暴露。已改为 `True`（与 WPF 默认模板一致），并通过「滚轮上下 / PageUp·Down 命令 / 拖动拇指」五项操作的自动化测试。
+- **统计分析 / 概览页排行榜的时长文字紧贴滚动条**：排行榜 `ItemsControl` 加 `Margin.Right=14`，时长文字与滚动条轨道之间留出呼吸空间，深色主题下不再视觉突兀。
+
+## [1.2.1] - 2026-10-10
+
+### 修复
+
+- **切换到「软件管理」「统计分析」等页面崩溃**（UI 重构回归）：
+  - 根因 1：`Themes/Theme.xaml` 里 ComboBox 模板用 `{StaticResource Icon.ChevronRight}`，但 `App.xaml` 把 `Icons.xaml` 排在 `Theme.xaml` 之后合并，StaticResource 在加载时找不到键直接抛 `XamlParseException`。已把 `Icons.xaml` 移到 `Theme.xaml` 之前。
+  - 根因 2：CheckBox 模板里对勾 Path 写了 `Fill="None"`，`None` 不是合法 Brush 字面量，BAML 反序列化时 `Brush.Parse` 抛 `FormatException`。已改为 `Fill="Transparent"`。
+- **滚动条水平方向渲染异常**：UI 重构时把 ScrollBar 模板写死成垂直（Width=10、Margin 上下留空），水平滚动条继承同一套模板导致方向错乱。已按 `Orientation=Horizontal` 拆出独立模板（Height=10、Margin 左右留空）。
+- **DatePicker 风格不搭、文字不居中**：此前只设了背景/边框，未重写控件模板，输入框和左侧日历按钮仍是 Aero 默认。已完整重写 DatePicker 与 DatePickerTextBox 模板——输入框文字垂直居中、按钮换成 14×14 时钟矢量图标、外层描边和圆角与其他输入控件一致。
+
+### 改进
+
+- **整体 UI 视觉重构**：从「经典 WPF 桌面应用」升级为现代桌面应用风格，更专业、更精致。
+  - 调色板重定义：6 档灰阶 + 现代紫罗兰品牌色（`#5B5BD6` / 暗色 `#7B7BEB`），新增 `Faint` 三级文字色与 `BorderStrong` 强边框槽位。
+  - 统一圆角规范：仅保留 `Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）两档。
+  - 统一字号阶梯：新增 `FontSize.Caption/Body/Subtitle/Title/PageTitle/Display` 资源键，统计数字使用 Bahnschrift 等宽字感。
+  - 弃用 Segoe MDL2 Assets 字符图标，新增 `Themes/Icons.xaml` 集中式 StreamGeometry 图标字典，导航、日历翻页、窗口控制、空状态等全部改用矢量 Path 图标。
+  - **自定义标题栏**：`WindowStyle=None + WindowChrome` 接管窗口外壳，左上角品牌 Logo + 标题，右上角最小化/最大化/关闭按钮；Windows 11 下通过 DWM API 启用圆角窗口。
+  - 侧边导航选中态从「整片色块」改为「浅底色 + 主色前景 + 左侧 3px 主色指示条」。
+  - 统计页周期切换从借用导航样式改为独立的 SegmentedControl（圆角轨道 + 子项胶囊）。
+  - 新增/重做控件样式：CheckBox（圆角方块 + 主色填充 + 白色对勾）、ComboBox（统一描边 + 圆角下拉项）、ProgressBar（细条 + 圆角端点）、ScrollBar（细轨 + 圆角拇指）、ToolTip（阴影 + 强边框）、DataGrid（透明表头 + 斑马纹 + 主色选中行）。
+  - 卡片新增极轻的 DropShadowEffect（仅作为视觉分层，不改变交互）。
+  - 所有按钮 hover 态从「描边变主色」改为「背景提升一档」，按压态 `SurfaceActive`，禁用态半透明。
+
+### 修复（既有缺陷，随本版发布）
 
 - 「扫描运行软件」取不到部分进程的路径（如鸣潮 Client-Win64-Shipping.exe）：此前只用 `Process.MainModule` 取路径，受保护进程会拒绝访问；现在失败时回退 `OpenProcess(QueryLimitedInformation) + QueryFullProcessImageName`，与前台监听同一套原生封装，路径与图标恢复正常。
 - 前台软件在前台、「运行」模式软件在后台时，运行模式软件不再被前台挤掉，两者同时各自累计；此前 `_currentApp ?? _runningApp` 的优先级让运行软件永远不会被统计。同一软件若同时命中前台与运行模式，只累计一次。
@@ -16,7 +47,7 @@
 - 活跃软件的状态文案按其统计模式显示「有效统计 / 前台 / 运行」，一眼区分是前台命中还是后台进程在跑。
 - 多个软件同时累计时，托盘悬浮文本在主显示项后追加「+N」提示其余活跃数量；连续使用提醒也对每个活跃软件分别按整小时触发。
 
-### 改进
+### 改进（统计口径）
 
 - 统计口径：各软件会话独立累计，排行榜各算各的，今日总计直接相加（重叠时段不去重）。同一软件同一时刻只累计一种计时。
 

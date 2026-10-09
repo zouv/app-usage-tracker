@@ -78,8 +78,9 @@ AppRuntime（共享单例）
 | `src/AppUsageTracker/Strings/Strings.Chinese.xml` | 新增 | 中文界面字符串（唯一来源，嵌入资源） |
 | `src/AppUsageTracker/Strings/Strings.English.xml` | 新增 | 英文界面字符串，键与中文一一对应 |
 | `src/AppUsageTracker/Converters/LocalizeConverter.cs` | 新增 | 分类/统计模式等模型字段到当前语言显示名的转换 |
-| `src/AppUsageTracker/Themes/Palette.Light.xaml` | 已有 | 浅色调色板，可被整体替换 |
+| `src/AppUsageTracker/Themes/Palette.Light.xaml` | 已有 | 浅色调色板（6 档灰阶 + 现代品牌紫），可被整体替换 |
 | `src/AppUsageTracker/Themes/Palette.Dark.xaml` | 已有 | 深色调色板，键与浅色一一对应 |
+| `src/AppUsageTracker/Themes/Icons.xaml` | 新增 | 集中式 StreamGeometry 图标资源字典（替代 Segoe MDL2 字符图标） |
 | `src/AppUsageTracker/Assets/app.ico` | 已有 | 应用图标，用于 exe、窗口、侧边栏和托盘 |
 | `tools/generate-icon.ps1` | 已有 | 可重现地生成多尺寸图标 |
 | `tools/capture-ui.ps1` | 已有 | 启动应用、切页并截图，供 UI 实跑核对 |
@@ -220,7 +221,7 @@ App.ExitApplication
 
 ## 5. 高频约束
 
-- 不要把“进程存在”当作默认有效使用。
+- 不要把”进程存在”当作默认有效使用。
 - 不要直接使用系统时钟差值计算持续时间。
 - 不要在 WinEvent 回调中执行磁盘 IO 或复杂查询。
 - 不要在 View Code-behind 中维护监听状态。
@@ -237,6 +238,13 @@ App.ExitApplication
 - 不要把概览页和统计页整体套进 `ScrollViewer`；图表要靠 `*` 行拿到真实高度。
 - 不要在 `AppColorPalette` 里改动槽位顺序或色值；顺序是色觉障碍分离度的保证。
 - 不要在每秒刷新的路径上重复提取图标；`AppIconProvider` 已按路径缓存。
+- **新增图标不要再用 `Segoe MDL2 Assets` 字符**；统一在 `Themes/Icons.xaml` 加 `StreamGeometry`，用 `<Path Data=”{StaticResource Icon.Xxx}” />` 引用。
+- **`Icons.xaml` 必须在 `App.xaml` 合并字典里排在 `Theme.xaml` 之前**：`Theme.xaml` 模板里用 `{StaticResource Icon.*}` 是加载时解析，Icons 排后面会直接抛 `XamlParseException`（崩溃发生在打开含 ComboBox/Calendar 的页面时）。
+- **Brush 属性不要写 `Fill=”None”`**：`None` 不是合法 Brush 字面量，BAML 反序列化时 `Brush.Parse` 抛 `FormatException`。要「无填充」写 `Fill=”Transparent”` 或 `Fill=”{x:Null}”`。
+- **重写 ScrollBar 模板时，Track 必须是模板根元素**：外面套 `Border`/`Grid` 行都会让 `PART_Track` 拿不到完整可用空间，WPF 内部按 Track 实际尺寸分配 Decrease/Thumb/Increase 三段，会出现「内容滚到底、拇指却跑出可视区」的错位。视觉圆角应在 Thumb 自己的模板里加，不要包在外层容器上。
+- **垂直 ScrollBar 自定义模板必须 `IsDirectionReversed="True"`**：默认 `False` 时滚轮方向正确，但**拖动 Thumb 方向会反**（WPF 默认模板的垂直 ScrollBar 就是 True）。改 ScrollBar 模板后必须做「滚轮向下/向上 + PageUp/PageDown 命令 + 拖动拇指」五种操作的完整自测。
+- **圆角只能用两档**：`Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）；不要硬编码 7、4 等值。
+- **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。
 
 ## 6. 维护要求
 
