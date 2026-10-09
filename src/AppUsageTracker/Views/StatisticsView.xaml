@@ -30,55 +30,65 @@
             </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
-            <RadioButton Content="{DynamicResource Loc.Statistics.Day}" GroupName="Period" Style="{StaticResource NavButton}"
-                         IsChecked="{Binding SelectedPeriod,
-                         Converter={StaticResource EnumEquals}, ConverterParameter=Day}" />
-            <RadioButton Content="{DynamicResource Loc.Statistics.Week}" GroupName="Period" Style="{StaticResource NavButton}"
-                         IsChecked="{Binding SelectedPeriod,
-                         Converter={StaticResource EnumEquals}, ConverterParameter=Week}" />
-            <RadioButton Content="{DynamicResource Loc.Statistics.Month}" GroupName="Period" Style="{StaticResource NavButton}"
-                         IsChecked="{Binding SelectedPeriod,
-                         Converter={StaticResource EnumEquals}, ConverterParameter=Month}" />
-            <RadioButton Content="{DynamicResource Loc.Statistics.Year}" GroupName="Period" Style="{StaticResource NavButton}"
-                         IsChecked="{Binding SelectedPeriod,
-                         Converter={StaticResource EnumEquals}, ConverterParameter=Year}" />
-            <RadioButton Content="{DynamicResource Loc.Statistics.All}" GroupName="Period" Style="{StaticResource NavButton}"
-                         IsChecked="{Binding SelectedPeriod,
-                         Converter={StaticResource EnumEquals}, ConverterParameter=All}" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <Border Style="{StaticResource SegmentedTrack}">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Content="{DynamicResource Loc.Statistics.Day}" GroupName="Period"
+                                 Style="{StaticResource SegmentedItem}"
+                                 IsChecked="{Binding SelectedPeriod,
+                                 Converter={StaticResource EnumEquals}, ConverterParameter=Day}" />
+                    <RadioButton Content="{DynamicResource Loc.Statistics.Week}" GroupName="Period"
+                                 Style="{StaticResource SegmentedItem}"
+                                 IsChecked="{Binding SelectedPeriod,
+                                 Converter={StaticResource EnumEquals}, ConverterParameter=Week}" />
+                    <RadioButton Content="{DynamicResource Loc.Statistics.Month}" GroupName="Period"
+                                 Style="{StaticResource SegmentedItem}"
+                                 IsChecked="{Binding SelectedPeriod,
+                                 Converter={StaticResource EnumEquals}, ConverterParameter=Month}" />
+                    <RadioButton Content="{DynamicResource Loc.Statistics.Year}" GroupName="Period"
+                                 Style="{StaticResource SegmentedItem}"
+                                 IsChecked="{Binding SelectedPeriod,
+                                 Converter={StaticResource EnumEquals}, ConverterParameter=Year}" />
+                    <RadioButton Content="{DynamicResource Loc.Statistics.All}" GroupName="Period"
+                                 Style="{StaticResource SegmentedItem}"
+                                 IsChecked="{Binding SelectedPeriod,
+                                 Converter={StaticResource EnumEquals}, ConverterParameter=All}" />
+                </StackPanel>
+            </Border>
         </StackPanel>
 
-        <Grid Grid.Row="2" Margin="0,0,0,14">
+        <Grid Grid.Row="2" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,6,0">
+            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc.Statistics.Total}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding TotalDuration}" FontSize="21" Margin="0,7,0,0" />
-                    <TextBlock Text="{Binding ChangeText}" Foreground="{DynamicResource Brush.Success}" />
+                    <TextBlock Text="{Binding TotalDuration}" Style="{StaticResource Text.StatValue}" Margin="0,8,0,2" />
+                    <TextBlock Text="{Binding ChangeText}" Foreground="{DynamicResource Brush.Success}"
+                               FontSize="{StaticResource FontSize.Caption}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="2,0,4,0">
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0">
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc.Statistics.DailyAvg}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding AverageDuration}" FontSize="21" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding AverageDuration}" Style="{StaticResource Text.StatValue}" Margin="0,8,0,0" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="4,0,2,0">
+            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="4,0">
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc.Statistics.TopApp}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding TopAppName}" FontSize="21" Margin="0,7,0,0"
+                    <TextBlock Text="{Binding TopAppName}" Style="{StaticResource Text.StatValue}" Margin="0,8,0,0"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource Card}" Margin="6,0,0,0">
+            <Border Grid.Column="3" Style="{StaticResource Card}" Margin="8,0,0,0">
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc.Statistics.Longest}" Style="{StaticResource Text.Muted}" />
-                    <TextBlock Text="{Binding LongestDuration}" FontSize="21" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding LongestDuration}" Style="{StaticResource Text.StatValue}" Margin="0,8,0,0" />
                 </StackPanel>
             </Border>
         </Grid>
@@ -139,9 +149,14 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="{DynamicResource Loc.Statistics.Ranking}" Style="{StaticResource Text.SectionTitle}" />
+                    <!--
+                        排行榜行的时长文字原本会贴到滚动条轨道，没有呼吸感。
+                        给 ItemsControl 加 Margin.Right=14：内容右缩 14px，
+                        滚动条出现在 ScrollViewer 右边缘，与时长文字之间留出 14px 空白。
+                    -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Margin="0,12,0,0">
-                        <ItemsControl ItemsSource="{Binding Ranking}">
+                        <ItemsControl ItemsSource="{Binding Ranking}" Margin="0,0,14,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Style="{StaticResource Button.Ghost}"
