@@ -1,0 +1,4 @@
+# 从 vibe-coding-starter 合并公共文档体系；保留现有纯 WPF 业务脚手架。
+type=custom
+template_version=2026-10-31
+created=2026-10-31

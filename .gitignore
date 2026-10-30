@@ -1,3 +1,8 @@
+# 环境变量（真实值不提交；样例可入库）
+.env
+.env.*
+!.env.example
+
 # .NET 构建产物
 bin/
 obj/
@@ -19,12 +24,12 @@ data/
 *.log
 *.tmp
 *.bak
-.claude/
 
 # IDE
 .vs/
 .vscode/
 .idea/
+*.swp
 *.user
 *.suo
 *.userosscache
@@ -34,7 +39,18 @@ data/
 _ReSharper*/
 *.DotSettings.user
 
-# Windows
+# Windows / macOS
 Thumbs.db
 Desktop.ini
+.DS_Store
+
+# Local AI/editor session settings (shared skills and rules remain tracked)
+/.claude/settings.local.json
+/.claude/sessions/
+/.claude/worktrees/
+/.codex/sessions/
+/.codex/logs/
+/.codex/config.local.toml
+/.opencode/sessions/
+/.history/
 

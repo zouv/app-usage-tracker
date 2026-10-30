@@ -125,12 +125,12 @@ app-usage-tracker — manager.sh
   sh manager.sh <command> [args]
 
 命令：
-  build [args]   构建解决方案
-  start [args]   启动 WPF 应用
-  test [args]    运行单元测试
+  build          构建解决方案（可追加 dotnet build 参数）
+  start          启动 WPF 应用（可追加 dotnet run 参数）
+  test           运行单元测试（可追加 dotnet test 参数）
   icon           重新生成应用图标（Assets/app.ico + app.png）
-  pack [args]    发布 win-x64 自包含单文件到 dist/
-  release <版本>  升级 csproj 版本号并打包单文件（本地，不含 git/CHANGELOG）
+  pack           发布 win-x64 自包含单文件到 dist/（可追加发布参数）
+  release        按 release <版本> 升级 csproj 版本号并打包（本地，不含 git/CHANGELOG）
   clean          清理构建、发布和运行时产物
   help           显示帮助
 EOF

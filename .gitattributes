@@ -1,4 +1,12 @@
-# cmd.exe 对 LF 行尾的批处理文件解析有缺陷（会误拆中文 rem 注释、
-# 把片段当命令执行，报 "is not recognized" / "| was unexpected"），
-# 因此所有 .bat 必须以 CRLF 行尾提交。
+# 换行约定：脚本永远 LF，Windows 批处理与解决方案按工具习惯使用 CRLF。
+* text=auto eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
 *.bat text eol=crlf
+*.cmd text eol=crlf
+*.sln text eol=crlf
+
+# 二进制资源不做换行转换。
+*.ico binary
+*.png binary
+*.woff2 binary

@@ -54,14 +54,16 @@ sh manager.sh start   # Launch the app
 
 | Command | Description |
 | --- | --- |
-| `sh manager.sh build` | Build the solution |
-| `sh manager.sh start` | Launch the WPF app |
-| `sh manager.sh test` | Run unit tests |
-| `sh manager.sh pack` | Publish a win-x64 self-contained single file to `dist/` |
-| `sh manager.sh release <version>` | Bump the version and package a single file (local only; no git/CHANGELOG) |
-| `sh manager.sh icon` | Regenerate the app icon (`Assets/app.ico` + `app.png`) |
-| `sh manager.sh clean` | Clean build and runtime artifacts |
-| `sh manager.sh help` | Show help |
+| `build` | Build the solution; extra `dotnet build` arguments are supported |
+| `start` | Launch the WPF app; extra `dotnet run` arguments are supported |
+| `test` | Run unit tests; extra `dotnet test` arguments are supported |
+| `icon` | Regenerate the app icon (`Assets/app.ico` + `app.png`) |
+| `pack` | Publish a win-x64 self-contained single file to `dist/` |
+| `release` | Use `release <version>` to bump the version and package locally |
+| `clean` | Clean build and runtime artifacts |
+| `help` | Show help |
+
+Run every command as `sh manager.sh <command>`.
 
 Windows users can skip Git Bash and double-click the `.bat` scripts directly:
 
@@ -91,22 +93,29 @@ Windows users can skip Git Bash and double-click the `.bat` scripts directly:
 app-usage-tracker/
 ├── src/AppUsageTracker/          WPF main project (Models/Services/ViewModels/Views/Themes/Controls)
 ├── tests/AppUsageTracker.Tests/  xUnit unit tests
-├── docs/                         Usage, tech, design and roadmap docs
+├── docs/                         Usage, tech, design and UI assets
 ├── tools/                        Icon generation and UI capture scripts
-├── manager.sh                    Unified build entrypoint (build/start/test/pack/clean)
+├── .claude/                      Shared documentation hook and opt-in skills
+├── manager.sh                    Unified build, run, test and release entrypoint
+├── check-docs.sh                 Mechanical documentation checks
+├── AGENTS.md                     Long-term AI working rules
 ├── ARCHITECTURE.md               Code architecture map
-├── CHANGELOG.md                  Version milestones
-└── HANDOFF.md                    Dev handoff status
+├── ROADMAP.md                    Overall plan and milestones
+├── CHANGELOG.md                  User-facing release history
+└── HANDOFF.md                    Active cross-session status
 ```
 
 ## 📚 Documentation
 
 > Documentation is currently in Chinese.
 
+- [Documentation index](docs/00-目录.md)
 - [Usage guide](docs/02-使用说明.md)
 - [Tech stack](docs/01-技术栈说明.md)
 - [Product design](docs/design/software-usage-duration-design.md)
 - [Architecture map](ARCHITECTURE.md)
+- [Roadmap](ROADMAP.md)
+- [Changelog](CHANGELOG.md)
 
 ## ⚖️ License
 

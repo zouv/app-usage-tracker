@@ -50,18 +50,20 @@ sh manager.sh build   # 构建解决方案
 sh manager.sh start   # 启动应用
 ```
 
-### 常用命令
+## 🛠️ manager.sh 命令一览
 
 | 命令 | 说明 |
 | --- | --- |
-| `sh manager.sh build` | 构建解决方案 |
-| `sh manager.sh start` | 启动 WPF 应用 |
-| `sh manager.sh test` | 运行单元测试 |
-| `sh manager.sh pack` | 发布 win-x64 自包含单文件到 `dist/` |
-| `sh manager.sh release <version>` | 升级版本号并打包单文件（本地，不含 git/CHANGELOG） |
-| `sh manager.sh icon` | 重新生成应用图标（`Assets/app.ico` + `app.png`） |
-| `sh manager.sh clean` | 清理构建与运行产物 |
-| `sh manager.sh help` | 显示帮助 |
+| `build` | 构建解决方案，可追加 `dotnet build` 参数 |
+| `start` | 启动 WPF 应用，可追加 `dotnet run` 参数 |
+| `test` | 运行单元测试，可追加 `dotnet test` 参数 |
+| `icon` | 重新生成应用图标（`Assets/app.ico` + `app.png`） |
+| `pack` | 发布 win-x64 自包含单文件到 `dist/`，可追加发布参数 |
+| `release` | 按 `release <version>` 升级版本号并打包（本地，不含 git/CHANGELOG） |
+| `clean` | 清理构建与运行产物 |
+| `help` | 显示帮助 |
+
+所有命令统一以 `sh manager.sh <命令>` 形式运行。
 
 Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本：
 
@@ -91,20 +93,27 @@ Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本：
 app-usage-tracker/
 ├── src/AppUsageTracker/          WPF 主项目（Models/Services/ViewModels/Views/Themes/Controls）
 ├── tests/AppUsageTracker.Tests/  xUnit 单元测试
-├── docs/                         使用、技术、设计与开发计划文档
+├── docs/                         使用、技术、设计与界面资源
 ├── tools/                        图标生成与 UI 截图脚本
-├── manager.sh                    统一构建入口（build/start/test/pack/clean）
+├── .claude/                      共享文档检查 hook 与按需技能
+├── manager.sh                    构建、运行、测试与发布统一入口
+├── check-docs.sh                 文档体系机械检查
+├── AGENTS.md                     AI 长期工作规则
 ├── ARCHITECTURE.md               代码链路图谱
-├── CHANGELOG.md                  版本里程碑
-└── HANDOFF.md                    开发接力状态
+├── ROADMAP.md                    总体计划与里程碑
+├── CHANGELOG.md                  面向使用者的版本记录
+└── HANDOFF.md                    进行中的跨会话状态
 ```
 
 ## 📚 文档
 
+- [文档目录](docs/00-目录.md)
 - [使用说明](docs/02-使用说明.md)
 - [技术栈说明](docs/01-技术栈说明.md)
 - [产品设计文档](docs/design/software-usage-duration-design.md)
 - [架构图谱](ARCHITECTURE.md)
+- [开发路线图](ROADMAP.md)
+- [版本变更记录](CHANGELOG.md)
 
 ## ⚖️ 许可
 

@@ -1,6 +1,8 @@
 # 代码链路图谱 · app-usage-tracker
 
-> 本文档描述当前工程结构、关键链路与任务作用域。
+> 面向 AI 的代码导航：先按 §0.5 定作用域，再按 §1 文件职责与 §2 函数入口定位，避免全量扫描源码。
+> 代码结构、接口或关键链路变化后同步本文（见 AGENTS §1）；长期坑与设计理由归 §7，日期、版本和改动经过归 CHANGELOG/git log。
+> 全文不超过 25,000 字；函数索引使用名称而非行号。图谱不是权威真相，与代码不符时以代码为准并顺手订正。
 
 ## 0. 一句话架构
 
@@ -44,7 +46,7 @@ AppRuntime（共享单例）
 | 运行模式进程扫描 | `Services/ProcessScanner*`（`EnumerateRunningProcesses`）、`TrackingCoordinator` | 统计页视觉 |
 | 空闲、锁屏、休眠 | `Services/IdleStateMonitor*`、`Services/SystemSessionMonitor*` | 软件管理界面 |
 | 会话与心跳 | `Services/ActivitySessionService*`、`Models/ActivitySession*` | 托盘视觉 |
-| 数据持久化 | `Services/JsonDataStore*`、`Models/` | XAML 页面 |
+| 数据持久化 | `Services/JsonAppDataStore*`、`Models/` | XAML 页面 |
 | 统计查询 | `Services/StatisticsService*`、统计模型和测试 | Win32 封装 |
 | 软件管理 | `Views/AppsView*`、`ViewModels/AppsViewModel*`、`TrackedApp*` | 时间线编辑 |
 | 构建发布 | `manager.sh`、`*.csproj`、`AppUsageTracker.sln` | 业务服务 |
@@ -71,48 +73,43 @@ AppRuntime（共享单例）
 | `src/AppUsageTracker/ViewModels/ChartData.cs` | 已有 | 图表系列、槽位和数据集契约 |
 | `src/AppUsageTracker/Services/AppColorPalette.cs` | 已有 | 8 槽位配色，按软件自动分配并随主题解析 |
 | `src/AppUsageTracker/Services/AppIconProvider.cs` | 已有 | 软件图标解析与缓存 |
-| `src/AppUsageTracker/Services/GlobalHotkeyService.cs` | 新增 | 全局快捷键注册到主窗口句柄并分发 WM_HOTKEY，托盘隐藏后仍可响应 |
-| `src/AppUsageTracker/Models/HotkeyDefinition.cs` | 新增 | 快捷键字符串与「修饰符 + 虚拟键码」的双向转换 |
+| `src/AppUsageTracker/Services/GlobalHotkeyService.cs` | 已有 | 全局快捷键注册到主窗口句柄并分发 WM_HOTKEY，托盘隐藏后仍可响应 |
+| `src/AppUsageTracker/Models/HotkeyDefinition.cs` | 已有 | 快捷键字符串与「修饰符 + 虚拟键码」的双向转换 |
 | `src/AppUsageTracker/Themes/Theme.xaml` | 已有 | 公共控件样式，颜色一律 DynamicResource |
-| `src/AppUsageTracker/Services/LocalizationService.cs` | 新增 | 界面语言服务，中英文切换、代码取文案 T()、日期格式与枚举显示名 |
-| `src/AppUsageTracker/Strings/Strings.Chinese.xml` | 新增 | 中文界面字符串（唯一来源，嵌入资源） |
-| `src/AppUsageTracker/Strings/Strings.English.xml` | 新增 | 英文界面字符串，键与中文一一对应 |
-| `src/AppUsageTracker/Converters/LocalizeConverter.cs` | 新增 | 分类/统计模式等模型字段到当前语言显示名的转换 |
+| `src/AppUsageTracker/Services/LocalizationService.cs` | 已有 | 界面语言服务，中英文切换、代码取文案 T()、日期格式与枚举显示名 |
+| `src/AppUsageTracker/Strings/Strings.Chinese.xml` | 已有 | 中文界面字符串（唯一来源，嵌入资源） |
+| `src/AppUsageTracker/Strings/Strings.English.xml` | 已有 | 英文界面字符串，键与中文一一对应 |
+| `src/AppUsageTracker/Converters/LocalizeConverter.cs` | 已有 | 分类/统计模式等模型字段到当前语言显示名的转换 |
 | `src/AppUsageTracker/Themes/Palette.Light.xaml` | 已有 | 浅色调色板（6 档灰阶 + 现代品牌紫），可被整体替换 |
 | `src/AppUsageTracker/Themes/Palette.Dark.xaml` | 已有 | 深色调色板，键与浅色一一对应 |
-| `src/AppUsageTracker/Themes/Icons.xaml` | 新增 | 集中式 StreamGeometry 图标资源字典（替代 Segoe MDL2 字符图标） |
+| `src/AppUsageTracker/Themes/Icons.xaml` | 已有 | 集中式 StreamGeometry 图标资源字典（替代 Segoe MDL2 字符图标） |
 | `src/AppUsageTracker/Assets/app.ico` | 已有 | 应用图标，用于 exe、窗口、侧边栏和托盘 |
 | `tools/generate-icon.ps1` | 已有 | 可重现地生成多尺寸图标 |
 | `tools/capture-ui.ps1` | 已有 | 启动应用、切页并截图，供 UI 实跑核对 |
 | `docs/design/` | 已有 | 产品、技术和界面设计 |
 | `manager.sh` | 已有 | build/start/test/icon/pack/clean/release 统一入口 |
 
-## 2. 模块位置
+## 2. 按「我要做什么」反查代码位置（任务 → 入口）
 
-| 模块 | 路径 | 主要职责 |
+> 只登记常见改动的入口函数或类型锚点，不是全量函数表。按名称搜索；搜不到时以代码为准，并在任务收尾时订正本表。
+
+| 我要改的东西 | 位置 | 关键函数 / 锚点 |
 | --- | --- | --- |
-| 应用壳 | `MainWindow.xaml`、`MainViewModel.cs` | 左侧导航和页面切换 |
-| 主题 | `Services/ThemeService.cs`、`Themes/Palette.*.xaml` | 整体替换调色板字典实现明暗切换 |
-| 界面语言 | `Services/LocalizationService.cs`、`Strings/Strings.*.xml` | 整体替换字符串字典实现中英文切换，代码用 T() 取文案 |
-| 时间线排版 | `ViewModels/ChartBuilder.cs`、`ViewModels/TimelineLayout.cs` | 时间窗对齐、分箱摊分和槽位换算 |
-| 图表控件 | `Controls/ZoomableBarChart.cs`、`Controls/ChartLegend.cs` | 自绘柱状图、缩放平移和图例联动 |
-| 软件配色 | `Services/AppColorPalette.cs` | 8 槽位自动分配，随明暗主题解析显示色 |
-| 软件图标 | `Services/AppIconProvider.cs` | Base64 优先、回退 exe 提取并缓存 |
-| 概览 | `Views/OverviewView.xaml` | 当前软件、今日摘要、时间线和排行 |
-| 软件管理 | `Views/AppsView.xaml` | 软件条目增删改查和扫描 |
-| 统计分析 | `Views/StatisticsView.xaml` | 日、周、月、年和累计统计 |
-| 时间记录 | `Views/TimelineView.xaml` | 原始会话查看和修正 |
-| 设置 | `Views/SettingsView.xaml` | 启动、统计、通知和隐私选项 || 前台监听 | `Services/ForegroundWindowMonitor.cs` | Win32 前台窗口变化 |
-| 系统状态 | `Services/IdleStateMonitor.cs`、`SystemSessionMonitor.cs` | 空闲、锁屏和休眠 |
-| 软件匹配 | `Services/ApplicationMatcher.cs` | 路径、进程名和标题匹配；进程级匹配（忽略窗口标题规则） |
-| 会话服务 | `Services/ActivitySessionService.cs` | 开始、结束、心跳和恢复 |
-| 持久化 | `Services/JsonDataStore.cs` | 原子保存、备份和恢复 |
-| 统计服务 | `Services/StatisticsService.cs` | 多周期聚合查询 |
-| 托盘 | `Services/TrayIconService.cs` | 后台常驻和快捷菜单 |
-| 全局快捷键 | `Services/GlobalHotkeyService.cs`、`Models/HotkeyDefinition.cs` | 系统级快捷键呼出 / 隐藏主窗口 |
-| 通知 | `Services/UsageNotificationService.cs` | 连续使用提醒和每日摘要（时间可配置） |
-| 数据编辑 | `Services/SessionEditor.cs` | 会话补录、修改、删除和合并 |
-| 导出备份 | `CsvExportService.cs`、`JsonAppDataStore.cs` | CSV、ZIP 备份和恢复 |
+| 应用启动与初始化 | `App.xaml.cs`、`Services/AppRuntime.cs` | `App.OnStartup`、`AppRuntime.InitializeAsync` |
+| 正常退出与会话收尾 | `App.xaml.cs`、`Services/ActivitySessionService.cs` | `App.ExitApplication`、`ActivitySessionService.StopAsync` |
+| 主窗口导航与页面承载 | `MainWindow.xaml`、`ViewModels/MainViewModel.cs` | 页面导航属性与命令 |
+| 前台窗口监听 | `Services/ForegroundWindowMonitor.cs`、`ApplicationMatcher.cs` | WinEventHook 封装、软件匹配入口 |
+| Running 模式进程扫描 | `Services/ProcessScanner.cs`、`TrackingCoordinator.cs` | `EnumerateRunningProcesses`、`MatchRunningProcess`、`HandleRunningProcessesAsync` |
+| 活动会话状态机与恢复 | `Services/ActivitySessionService.cs` | `HandleRunningProcessesAsync`、`RecoverOpenSessions`、`StopAsync` |
+| 数据加载与原子保存 | `Services/JsonAppDataStore.cs` | `LoadAsync`、`WriteAtomicAsync` |
+| 统计图表数据组装 | `ViewModels/ChartBuilder.cs`、`StatisticsViewModel.cs` | `BuildDaily`、`BuildWeekly`、`BuildByApp` |
+| 柱状图缩放与绘制 | `Controls/ZoomableBarChart.cs`、`ViewModels/ChartLayout.cs` | `OnRender`、缩放/平移换算 |
+| 界面语言与动态文案 | `Services/LocalizationService.cs`、`Strings/` | `Apply`、`T`、`LanguageChanged` |
+| 明暗主题与资源字典 | `Services/ThemeService.cs`、`App.xaml`、`Themes/` | 调色板字典整体替换 |
+| 全局快捷键呼出 / 隐藏 | `Services/GlobalHotkeyService.cs`、`App.xaml.cs` | WM_HOTKEY 分发、`App.ToggleMainWindow` |
+| 托盘与通知 | `Services/TrayIconService.cs`、`UsageNotificationService.cs` | 托盘菜单、连续使用提醒、每日摘要 |
+| 会话编辑与导出 | `Services/SessionEditor.cs`、`CsvExportService.cs` | 补录、修改、合并、CSV 导出 |
+| 构建、发布与清理 | `manager.sh`、根目录 `*.bat` | `cmd_build`、`cmd_test`、`cmd_pack`、`cmd_release`、`cmd_clean` |
 
 ## 3. 关键链路
 
@@ -124,7 +121,7 @@ WinEventHook
  -> ApplicationMatcher
  -> ActivitySessionService.EndCurrent()
  -> ActivitySessionService.StartMatched()
- -> JsonDataStore
+ -> JsonAppDataStore
 ```
 
 ### 3.1b 运行模式进程扫描（心跳驱动）
@@ -219,7 +216,32 @@ App.ExitApplication
 | `ActiveApps` | 全部正在累计的软件（`ActiveAppInfo`：App + Session + 来源 TrackingMode），支持多软件并行 |
 | `CurrentApp` / `CurrentSession` | 主显示项（前台命中优先，否则第一个活跃软件；无软件活跃时 CurrentSession 回退到全局状态会话），供托盘/通知等单值消费 |
 
-## 5. 高频约束
+## 5. 样式 / 资源索引
+
+| 区段 | 位置 / 搜索锚点 | 内容与约束 |
+| --- | --- | --- |
+| 资源字典顺序 | `App.xaml` 的 `MergedDictionaries` | 第 0 位调色板、第 1 位语言字典由服务按下标替换；`Icons.xaml` 必须先于 `Theme.xaml` |
+| 公共控件样式 | `Themes/Theme.xaml` | 颜色使用 `DynamicResource`；模板、圆角和字号遵循 §7 |
+| 明暗调色板 | `Themes/Palette.Light.xaml`、`Palette.Dark.xaml` | 两文件资源键一一对应，由 `ThemeService` 整体替换 |
+| 矢量图标 | `Themes/Icons.xaml` 的 `Icon.*` | 统一 StreamGeometry，通过 Path 引用，不新增 MDL2 字符图标 |
+| 本地化文案 | `Strings/Strings.Chinese.xml`、`Strings.English.xml` | 键一一对应；XAML 用 `Loc.*`，代码用 `LocalizationService.T` |
+| 图表与软件配色 | `Controls/`、`Services/AppColorPalette.cs` | 自绘几何与固定 8 槽位，不为大量柱段创建可视元素 |
+
+## 6. 运维 / 脚本
+
+> 运维任务只读本节、`manager.sh`、相关 BAT/PowerShell 与 `docs/02-使用说明.md`，无需进入业务代码。具体操作以使用说明为准。
+
+| 入口 | 职责 |
+| --- | --- |
+| `manager.sh` | build/start/test/icon/pack/release/clean/help 统一入口；版本号写入主项目 csproj |
+| `build.bat`、`test.bat`、`ci.bat` | Windows 构建与测试包装；`ci.bat` 禁用 MSBuild/Roslyn 常驻服务器 |
+| `publish.bat` | 单文件发布与产物回退检查，保留 GenerateBundle、相对输出路径等项目专用处理 |
+| `clean.bat` | Windows 清理入口 |
+| `tools/generate-icon.ps1` | 可重现地生成应用图标 |
+| `tools/capture-ui.ps1` | 启动、切页与截图，辅助 UI 实跑核对 |
+| `check-docs.sh` | 文档机械检查；`--hook` 供 Claude PostToolUse 调用 |
+
+## 7. 易踩的坑 / 长期约束
 
 - 不要把”进程存在”当作默认有效使用。
 - 不要直接使用系统时钟差值计算持续时间。
@@ -246,6 +268,7 @@ App.ExitApplication
 - **圆角只能用两档**：`Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）；不要硬编码 7、4 等值。
 - **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。
 
-## 6. 维护要求
-
-新增、删除或重命名模块后，更新本文档的作用域路由、文件职责和关键链路。
+- **取进程路径不能只靠 `Process.MainModule`**：受保护或位数不匹配的进程会拒绝访问；统一使用 `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) + QueryFullProcessImageName` 回退，现有实现位于 `ProcessScanner.TryGetPath` 与 `ForegroundWindowMonitor.QueryPath`。
+- **分类持久化值与显示文案分离**：`TrackedApp.Category` 保持中文稳定值；筛选下拉使用「稳定值 + 本地化标签」的 `OptionItem`，不要比较界面文案。
+- **被 `CollectionView` 包装的集合必须回 Dispatcher 更新**：测试并行执行或后台回调中直接修改会抛跨线程异常；无 `Application` 的测试环境可跳过 UI 刷新。
+- **DatePicker/Calendar 主题必须显式接线**：`DatePicker.CalendarStyle → Calendar.Style → CalendarItemStyle/CalendarDayButtonStyle/CalendarButtonStyle` 整条链不能缺；ComboBox 收起框显式设置 `VerticalContentAlignment="Center"`。
