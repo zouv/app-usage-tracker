@@ -20,11 +20,14 @@ public partial class AppsViewModel : ObservableObject
     private const string DisabledStatusValue = "disabled";
 
     private readonly AppRuntime _runtime;
+    private readonly IConfirmationService _confirmationService;
     private Guid? _editingId;
+    private int _scanVersion;
 
-    public AppsViewModel(AppRuntime runtime)
+    public AppsViewModel(AppRuntime runtime, IConfirmationService? confirmationService = null)
     {
         _runtime = runtime;
+        _confirmationService = confirmationService ?? new MessageBoxConfirmationService();
         Apps = new ObservableCollection<TrackedApp>(_runtime.Apps);
         AppsView = CollectionViewSource.GetDefaultView(Apps);
         AppsView.Filter = FilterApp;
@@ -49,6 +52,47 @@ public partial class AppsViewModel : ObservableObject
     private IReadOnlyList<OptionItem> _trackingModes = [];
 
     public ObservableCollection<RunningProcessInfo> RunningProcesses { get; }
+
+    [ObservableProperty]
+    private bool _isProcessPickerOpen;
+
+    [ObservableProperty]
+    private bool _isScanningProcesses;
+
+    [ObservableProperty]
+    private bool _hasRunningProcesses;
+
+    [ObservableProperty]
+    private string _processScanStatus = string.Empty;
+
+    /// <summary>页面每次进入可视树时同步托盘等外部入口新增/删除的软件。</summary>
+    public void Activate()
+    {
+        var appIds = _runtime.Apps.Select(app => app.Id).ToHashSet();
+        if (SelectedApp is not null && !appIds.Contains(SelectedApp.Id))
+        {
+            SelectedApp = null;
+        }
+
+        for (var index = Apps.Count - 1; index >= 0; index--)
+        {
+            if (!appIds.Contains(Apps[index].Id))
+            {
+                Apps.RemoveAt(index);
+            }
+        }
+
+        var viewIds = Apps.Select(app => app.Id).ToHashSet();
+        foreach (var app in _runtime.Apps)
+        {
+            if (viewIds.Add(app.Id))
+            {
+                Apps.Add(app);
+            }
+        }
+
+        AppsView.Refresh();
+    }
 
     /// <summary>语言切换后重建下拉标签，并重置列表让分类/模式列按新语言重绘。</summary>
     private void OnLanguageChanged(object? sender, EventArgs eventArgs)
@@ -120,9 +164,13 @@ public partial class AppsViewModel : ObservableObject
     ];
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EditSelectedCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleSelectedCommand))]
     private TrackedApp? _selectedApp;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UseSelectedProcessCommand))]
     private RunningProcessInfo? _selectedProcess;
 
     [ObservableProperty]
@@ -162,7 +210,11 @@ public partial class AppsViewModel : ObservableObject
     private string _editIconBase64 = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWindowTitleRuleAvailable))]
     private TrackingMode _editTrackingMode = TrackingMode.Effective;
+
+    /// <summary>运行模式只按进程匹配，窗口标题规则在该模式下不会生效。</summary>
+    public bool IsWindowTitleRuleAvailable => EditTrackingMode != TrackingMode.Running;
 
     [ObservableProperty]
     private bool _editEnabled = true;
@@ -175,6 +227,9 @@ public partial class AppsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _editNotes = string.Empty;
+
+    [ObservableProperty]
+    private string _editorError = string.Empty;
 
     [RelayCommand]
     private void AddNew()
@@ -191,10 +246,11 @@ public partial class AppsViewModel : ObservableObject
         EditIgnoreIdle = false;
         EditWindowTitle = string.Empty;
         EditNotes = string.Empty;
+        EditorError = string.Empty;
         IsEditorOpen = true;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedApp))]
     private void EditSelected()
     {
         if (SelectedApp is null)
@@ -215,6 +271,7 @@ public partial class AppsViewModel : ObservableObject
         EditWindowTitle = SelectedApp.MatchRules
             .FirstOrDefault(rule => rule.Type == MatchRuleType.WindowTitleContains)?.Pattern ?? string.Empty;
         EditNotes = SelectedApp.Notes;
+        EditorError = string.Empty;
         IsEditorOpen = true;
     }
 
@@ -225,8 +282,11 @@ public partial class AppsViewModel : ObservableObject
             (string.IsNullOrWhiteSpace(EditProcessName) &&
              string.IsNullOrWhiteSpace(EditExecutablePath)))
         {
+            EditorError = LocalizationService.T("Loc.Apps.ValidationRequired");
             return;
         }
+
+        EditorError = string.Empty;
 
         var app = _editingId is { } id
             ? Apps.FirstOrDefault(item => item.Id == id)
@@ -248,7 +308,7 @@ public partial class AppsViewModel : ObservableObject
         app.IgnoreIdle = EditIgnoreIdle;
         app.Notes = EditNotes.Trim();
         app.MatchRules.RemoveAll(rule => rule.Type == MatchRuleType.WindowTitleContains);
-        if (!string.IsNullOrWhiteSpace(EditWindowTitle))
+        if (IsWindowTitleRuleAvailable && !string.IsNullOrWhiteSpace(EditWindowTitle))
         {
             app.MatchRules.Add(new MatchRule
             {
@@ -258,7 +318,17 @@ public partial class AppsViewModel : ObservableObject
             });
         }
 
-        await _runtime.SaveAppsAsync();
+        try
+        {
+            await _runtime.SaveAppsAsync();
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("保存软件配置失败。", exception);
+            EditorError = exception.Message;
+            return;
+        }
+
         AppsView.Refresh();
         IsEditorOpen = false;
     }
@@ -266,7 +336,7 @@ public partial class AppsViewModel : ObservableObject
     [RelayCommand]
     private void CancelEditor() => IsEditorOpen = false;
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedApp))]
     private async Task DeleteSelectedAsync()
     {
         if (SelectedApp is null)
@@ -274,12 +344,28 @@ public partial class AppsViewModel : ObservableObject
             return;
         }
 
-        _runtime.Apps.RemoveAll(item => item.Id == SelectedApp.Id);
-        Apps.Remove(SelectedApp);
-        await _runtime.SaveAppsAsync();
+        var selected = SelectedApp;
+        if (!_confirmationService.Confirm(
+                LocalizationService.T("Loc.Apps.DeleteConfirm", selected.Name),
+                LocalizationService.T("Loc.Apps.DeleteConfirmTitle")))
+        {
+            return;
+        }
+
+        _runtime.Apps.RemoveAll(item => item.Id == selected.Id);
+        Apps.Remove(selected);
+        SelectedApp = null;
+        try
+        {
+            await _runtime.SaveAppsAsync();
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("删除软件配置失败。", exception);
+        }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedApp))]
     private async Task ToggleSelectedAsync()
     {
         if (SelectedApp is null)
@@ -317,16 +403,58 @@ public partial class AppsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ScanProcesses()
+    private async Task ScanProcessesAsync()
     {
+        var version = Interlocked.Increment(ref _scanVersion);
+        IsProcessPickerOpen = true;
+        IsScanningProcesses = true;
+        HasRunningProcesses = false;
+        ProcessScanStatus = LocalizationService.T("Loc.Apps.Scanning");
+        SelectedProcess = null;
         RunningProcesses.Clear();
-        foreach (var process in _runtime.ProcessScanner.EnumerateVisibleProcesses())
+
+        IReadOnlyList<RunningProcessInfo> processes;
+        try
+        {
+            // 枚举进程、读取路径和图标可能耗时数秒，放到后台线程避免界面卡死。
+            processes = await Task.Run(() => _runtime.ProcessScanner.EnumerateVisibleProcesses());
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("扫描运行软件失败。", exception);
+            processes = [];
+        }
+
+        if (version != Volatile.Read(ref _scanVersion))
+        {
+            return;
+        }
+
+        foreach (var process in processes)
         {
             RunningProcesses.Add(process);
         }
+
+        HasRunningProcesses = RunningProcesses.Count > 0;
+        ProcessScanStatus = HasRunningProcesses
+            ? string.Empty
+            : LocalizationService.T("Loc.Apps.NoRunningProcesses");
+        IsScanningProcesses = false;
     }
 
-    [RelayCommand]
+    /// <summary>关闭进程选择浮层，并废弃仍在进行的扫描结果。</summary>
+    public void CloseProcessScan()
+    {
+        Interlocked.Increment(ref _scanVersion);
+        SelectedProcess = null;
+        RunningProcesses.Clear();
+        HasRunningProcesses = false;
+        IsScanningProcesses = false;
+        IsProcessPickerOpen = false;
+        ProcessScanStatus = string.Empty;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedProcess))]
     private void UseSelectedProcess()
     {
         if (SelectedProcess is null)
@@ -341,8 +469,12 @@ public partial class AppsViewModel : ObservableObject
             ? SelectedProcess.WindowTitle.Split(" - ", StringSplitOptions.RemoveEmptyEntries).Last()
             : Path.GetFileNameWithoutExtension(SelectedProcess.ProcessName);
         EditIconBase64 = SelectedProcess.IconBase64;
-        RunningProcesses.Clear();
+        CloseProcessScan();
     }
+
+    private bool HasSelectedApp() => SelectedApp is not null;
+
+    private bool HasSelectedProcess() => SelectedProcess is not null;
 
     private bool FilterApp(object item)
     {

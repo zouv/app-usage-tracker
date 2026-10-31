@@ -39,7 +39,7 @@
             <Grid Grid.Column="0" Margin="0,0,10,0">
                 <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="{DynamicResource Loc.Apps.SearchTooltip}" />
-                <TextBlock Text="搜索软件" IsHitTestVisible="False"
+                <TextBlock Text="{DynamicResource Loc.Apps.SearchPlaceholder}" IsHitTestVisible="False"
                            VerticalAlignment="Center" Margin="10,0,0,0">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Muted}">
@@ -68,10 +68,10 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <DataGrid Grid.Row="0" ItemsSource="{Binding AppsView}" SelectedItem="{Binding SelectedApp}"
-                          IsReadOnly="True"
+                          IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow"
                           MouseDoubleClick="OnAppRowDoubleClick">
                     <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
+                        <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                             <Setter Property="ToolTip" Value="{Binding ConfigSummary}" />
                         </Style>
                     </DataGrid.RowStyle>
@@ -164,8 +164,11 @@
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="{DynamicResource Loc.Apps.Field.TitleMatch}" />
-                        <TextBox Text="{Binding EditWindowTitle}" Margin="0,5,0,10" />
+                        <StackPanel IsEnabled="{Binding IsWindowTitleRuleAvailable}"
+                                    ToolTip="{DynamicResource Loc.Apps.Field.TitleMatchModeHint}">
+                            <TextBlock Text="{DynamicResource Loc.Apps.Field.TitleMatch}" />
+                            <TextBox Text="{Binding EditWindowTitle}" Margin="0,5,0,10" />
+                        </StackPanel>
                         <CheckBox Content="{DynamicResource Loc.Apps.Field.EnableListen}" IsChecked="{Binding EditEnabled}"
                                   ToolTip="{DynamicResource Loc.Apps.Field.EnableListenTip}" />
                         <CheckBox Content="{DynamicResource Loc.Apps.Field.IgnoreIdle}" IsChecked="{Binding EditIgnoreIdle}"
@@ -173,6 +176,19 @@
                         <TextBlock Text="{DynamicResource Loc.Apps.Field.Notes}" Margin="0,8,0,0" />
                         <TextBox Text="{Binding EditNotes}" AcceptsReturn="True" Height="58"
                                  Margin="0,5,0,12" />
+                        <TextBlock Text="{Binding EditorError}"
+                                   Foreground="{DynamicResource Brush.Danger}"
+                                   TextWrapping="Wrap" Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EditorError}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Content="{DynamicResource Loc.Apps.Cancel}" Command="{Binding CancelEditorCommand}"
                                     Margin="0,0,8,0" />
@@ -185,8 +201,8 @@
         </Border>
 
         <Border Grid.RowSpan="3" Background="#55000000"
-                Visibility="{Binding RunningProcesses.Count,
-                Converter={StaticResource NonZeroCountVisibility}}">
+                Visibility="{Binding IsProcessPickerOpen,
+                Converter={StaticResource BoolToVisibility}}">
             <Border Style="{StaticResource Card}" Width="680" Height="500"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
@@ -196,15 +212,24 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="{DynamicResource Loc.Apps.SelectRunning}" Style="{StaticResource Text.SectionTitle}" />
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding RunningProcesses}"
-                              SelectedItem="{Binding SelectedProcess}" IsReadOnly="True"
-                              Margin="0,12">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Process}" Binding="{Binding ProcessName}" Width="150" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.WindowTitle}" Binding="{Binding WindowTitle}" Width="2*" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.ProcessPath}" Binding="{Binding ExecutablePath}" Width="3*" />
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Grid Grid.Row="1" Margin="0,12">
+                        <DataGrid ItemsSource="{Binding RunningProcesses}"
+                                  SelectedItem="{Binding SelectedProcess}" IsReadOnly="True"
+                                  SelectionMode="Single" SelectionUnit="FullRow"
+                                  Visibility="{Binding HasRunningProcesses,
+                                  Converter={StaticResource BoolToVisibility}}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.Process}" Binding="{Binding ProcessName}" Width="150" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.WindowTitle}" Binding="{Binding WindowTitle}" Width="2*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Apps.Col.ProcessPath}" Binding="{Binding ExecutablePath}" Width="3*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="{Binding ProcessScanStatus}"
+                                   Style="{StaticResource Text.Muted}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding HasRunningProcesses,
+                                   Converter={StaticResource InverseBoolToVisibility}}" />
+                    </Grid>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="{DynamicResource Loc.Apps.Close}" Click="OnCloseScan" Margin="0,0,8,0" />
                         <Button Content="{DynamicResource Loc.Apps.UseSelected}" Command="{Binding UseSelectedProcessCommand}"

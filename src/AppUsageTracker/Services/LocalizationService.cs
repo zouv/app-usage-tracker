@@ -51,6 +51,12 @@ public static class LocalizationService
             _strings = LoadEmbeddedDictionary(language);
         }
 
+        // 语言没变且资源已安装时无需重建整份字符串字典。
+        if (!changed && _installed)
+        {
+            return;
+        }
+
         if (Application.Current?.Resources is { } resources)
         {
             var strings = new ResourceDictionary();

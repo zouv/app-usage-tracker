@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using AppUsageTracker.Models;
 using Drawing = System.Drawing;
 using WinForms = System.Windows.Forms;
@@ -18,7 +19,9 @@ public sealed class TrayIconService : IDisposable
     private readonly Func<Task> _togglePrivateMode;
     private readonly Func<Task> _addCurrentApp;
     private readonly Action _exit;
+    private readonly Dispatcher _dispatcher;
     private TrackingSnapshot? _snapshot;
+    private bool _disposed;
 
     public TrayIconService(
         Action showWindow,
@@ -32,6 +35,7 @@ public sealed class TrayIconService : IDisposable
         _togglePrivateMode = togglePrivateMode;
         _addCurrentApp = addCurrentApp;
         _exit = exit;
+        _dispatcher = Dispatcher.CurrentDispatcher;
         _statusItem = new WinForms.ToolStripMenuItem(LocalizationService.T("Loc.Status.Running"))
         {
             Enabled = false,
@@ -91,19 +95,43 @@ public sealed class TrayIconService : IDisposable
         return Drawing.SystemIcons.Application;
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs eventArgs) => ApplyTexts();
+    private void OnLanguageChanged(object? sender, EventArgs eventArgs) =>
+        RunOnUiThread(ApplyTexts);
 
     public void Update(TrackingSnapshot snapshot)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!_dispatcher.CheckAccess())
+        {
+            RunOnUiThread(() => Update(snapshot));
+            return;
+        }
+
         _snapshot = snapshot;
         ApplyTexts();
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (_disposed ||
+            _dispatcher.HasShutdownStarted ||
+            _dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        _dispatcher.BeginInvoke(action);
     }
 
     /// <summary>按最近一次快照与当前界面语言刷新菜单项和悬浮文本。</summary>
     private void ApplyTexts()
     {
         var snapshot = _snapshot;
-        if (snapshot is null)
+        if (_disposed || snapshot is null)
         {
             return;
         }
@@ -119,7 +147,8 @@ public sealed class TrayIconService : IDisposable
         _statusItem.Text = app;
         _pauseItem.Text = LocalizationService.T(
             snapshot.IsPaused ? "Loc.Tray.Resume" : "Loc.Tray.Pause");
-        _privateItem.Text = LocalizationService.T("Loc.Tray.Private");
+        _privateItem.Text = LocalizationService.T(
+            snapshot.IsPrivateMode ? "Loc.Tray.PrivateOn" : "Loc.Tray.Private");
         _addItem.Text = LocalizationService.T("Loc.Tray.Add");
         _showItem.Text = LocalizationService.T("Loc.Tray.Show");
         _exitItem.Text = LocalizationService.T("Loc.Tray.Exit");
@@ -140,6 +169,17 @@ public sealed class TrayIconService : IDisposable
 
     public void ShowNotification(string title, string message)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!_dispatcher.CheckAccess())
+        {
+            RunOnUiThread(() => ShowNotification(title, message));
+            return;
+        }
+
         _notifyIcon.BalloonTipTitle = title;
         _notifyIcon.BalloonTipText = message;
         _notifyIcon.ShowBalloonTip(3000);
@@ -147,6 +187,12 @@ public sealed class TrayIconService : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         LocalizationService.LanguageChanged -= OnLanguageChanged;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();

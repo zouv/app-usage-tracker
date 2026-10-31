@@ -50,7 +50,7 @@ public sealed class SessionEditorTests
             new ApplicationMatcher(),
             new FakeProcessScanner());
         var editor = new SessionEditor(runtime, time);
-        runtime.Sessions.AddRange(
+        runtime.RawSessions.AddRange(
         [
             new ActivitySession
             {
@@ -68,5 +68,57 @@ public sealed class SessionEditorTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => editor.MergeAsync(runtime.Sessions[0].Id, runtime.Sessions[1].Id));
+    }
+
+    [Fact]
+    public async Task UpdateRejectsActiveSession()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        await using var runtime = new AppRuntime(
+            new MemoryAppDataStore(),
+            time,
+            new ApplicationMatcher(),
+            new FakeProcessScanner());
+        var editor = new SessionEditor(runtime, time);
+        var active = new ActivitySession
+        {
+            ApplicationId = Guid.NewGuid(),
+            StartedAtUtc = time.UtcNow.AddMinutes(-5),
+        };
+        runtime.RawSessions.Add(active);
+        var edited = active.Clone();
+        edited.EndedAtUtc = time.UtcNow;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => editor.UpdateAsync(edited));
+        Assert.Null(runtime.Sessions.Single().EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task DeleteRangeSkipsActiveSessions()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        await using var runtime = new AppRuntime(
+            new MemoryAppDataStore(),
+            time,
+            new ApplicationMatcher(),
+            new FakeProcessScanner());
+        var editor = new SessionEditor(runtime, time);
+        var completed = new ActivitySession
+        {
+            ApplicationId = Guid.NewGuid(),
+            StartedAtUtc = time.UtcNow.AddMinutes(-10),
+            EndedAtUtc = time.UtcNow.AddMinutes(-5),
+        };
+        var active = new ActivitySession
+        {
+            ApplicationId = Guid.NewGuid(),
+            StartedAtUtc = time.UtcNow.AddMinutes(-1),
+        };
+        runtime.RawSessions.AddRange([completed, active]);
+
+        var deleted = await editor.DeleteRangeAsync([completed.Id, active.Id]);
+
+        Assert.Equal(1, deleted);
+        Assert.Equal(active.Id, Assert.Single(runtime.Sessions).Id);
     }
 }

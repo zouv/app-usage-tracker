@@ -65,15 +65,22 @@ sh manager.sh start   # 启动应用
 
 所有命令统一以 `sh manager.sh <命令>` 形式运行。
 
-Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本：
+Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本；公共逻辑位于 `scripts/*.ps1`，自动选用 PowerShell 7 或 Windows PowerShell：
 
 | 脚本 | 说明 |
 | --- | --- |
-| `build.bat` | 构建解决方案（参数 `Debug`/`Release`） |
-| `test.bat` | 运行单元测试（参数 `Debug`/`Release`） |
-| `publish.bat` | 发布自包含单文件到 `dist/`（参数 `self`/`fx`） |
-| `clean.bat` | 清理 `bin`/`obj`/`dist` |
+| `build.bat` | 构建解决方案（参数 `Debug`/`Release`，可追加 `dotnet build` 参数） |
+| `test.bat` | 运行全部测试项目（参数 `Debug`/`Release`，可追加 `dotnet test` 参数） |
+| `dev.bat` | 开发入口：正常关闭已运行实例后重新构建 Debug 并启动，可追加应用参数 |
+| `run.bat` | 启动已构建应用；缺少对应配置时先构建（参数 `Debug`/`Release`） |
+| `stop.bat` | 请求正常关闭并等待；不会强制结束进程，托盘常驻时需从托盘菜单退出 |
+| `status.bat` | 查看应用进程与脚本启动记录 |
+| `publish.bat` | 暂存并验证单文件后发布到 `dist/`（参数 `self`/`fx`） |
+| `package.bat` | `publish.bat` 的别名 |
+| `clean.bat` | 清理受管的构建产物；应用运行时拒绝执行，不删除用户数据 |
 | `ci.bat` | 一键流水线：clean → build Release → test Release → publish self |
+
+BAT 默认在结束后暂停；自动化调用可设置 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停。
 
 ## 🧱 技术栈
 
@@ -95,6 +102,7 @@ app-usage-tracker/
 ├── tests/AppUsageTracker.Tests/  xUnit 单元测试
 ├── docs/                         使用、技术、设计与界面资源
 ├── tools/                        图标生成与 UI 截图脚本
+├── scripts/                      BAT 对应的 PowerShell 构建、运行与发布逻辑
 ├── .claude/                      共享文档检查 hook 与按需技能
 ├── manager.sh                    构建、运行、测试与发布统一入口
 ├── check-docs.sh                 文档体系机械检查

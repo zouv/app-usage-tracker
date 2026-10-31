@@ -78,6 +78,7 @@
     <String Key="Loc.Apps.Scan">Scan running apps</String>
     <String Key="Loc.Apps.Add">+ Add app</String>
     <String Key="Loc.Apps.SearchTooltip">Search by name, process or path</String>
+    <String Key="Loc.Apps.SearchPlaceholder">Search apps</String>
     <String Key="Loc.Apps.Col.App">App</String>
     <String Key="Loc.Apps.Col.Category">Category</String>
     <String Key="Loc.Apps.Col.Path">Match path</String>
@@ -96,6 +97,7 @@
     <String Key="Loc.Apps.Field.Category">Category</String>
     <String Key="Loc.Apps.Field.Mode">Tracking mode</String>
     <String Key="Loc.Apps.Field.TitleMatch">Window title contains (optional)</String>
+    <String Key="Loc.Apps.Field.TitleMatchModeHint">Title rules apply only to Foreground and Effective modes. Running mode matches processes only.</String>
     <String Key="Loc.Apps.Field.Color">Color (#RRGGBB)</String>
     <String Key="Loc.Apps.Field.EnableListen">Enable tracking</String>
     <String Key="Loc.Apps.Field.IgnoreIdle">Ignore idle time</String>
@@ -108,6 +110,11 @@
     <String Key="Loc.Apps.Col.ProcessPath">Path</String>
     <String Key="Loc.Apps.Close">Close</String>
     <String Key="Loc.Apps.UseSelected">Use selected</String>
+    <String Key="Loc.Apps.Scanning">Scanning running apps…</String>
+    <String Key="Loc.Apps.NoRunningProcesses">No processes with visible windows found</String>
+    <String Key="Loc.Apps.ValidationRequired">Enter a name and at least a process name or executable path.</String>
+    <String Key="Loc.Apps.DeleteConfirmTitle">Delete app</String>
+    <String Key="Loc.Apps.DeleteConfirm">Delete "{0}"? Recorded history will be kept.</String>
     <String Key="Loc.Apps.Category.All">All categories</String>
     <String Key="Loc.Apps.Category.Uncategorized">Uncategorized</String>
     <String Key="Loc.Apps.Category.Development">Development</String>
@@ -150,7 +157,21 @@
     <String Key="Loc.Timeline.Field.Notes">Notes</String>
     <String Key="Loc.Timeline.DeletedApp">Deleted app</String>
     <String Key="Loc.Timeline.Manual">Manual</String>
+    <String Key="Loc.Timeline.Ongoing">In progress</String>
+    <String Key="Loc.Timeline.ActiveSessionLocked">In-progress sessions cannot be edited. Try again after it ends.</String>
+    <String Key="Loc.Timeline.ClearDayConfirmTitle">Clear day</String>
+    <String Key="Loc.Timeline.ClearDayConfirm">Delete all completed sessions on {0}? This cannot be undone.</String>
+    <String Key="Loc.Timeline.DeleteConfirmTitle">Delete session</String>
+    <String Key="Loc.Timeline.DeleteConfirm">Delete the {0} session from {1}? This cannot be undone.</String>
+    <String Key="Loc.Timeline.MergeConfirmTitle">Merge sessions</String>
+    <String Key="Loc.Timeline.MergeConfirm">Merge the current {0} session with the previous one? The original sessions will be replaced. This cannot be undone.</String>
+    <String Key="Loc.Timeline.Editor.AppRequired">Select an app for this session.</String>
+    <String Key="Loc.Timeline.Editor.EndAfterStart">End time must be later than start time.</String>
     <String Key="Loc.Timeline.CsvFilter">CSV files|*.csv</String>
+    <String Key="Loc.Timeline.Filter.AllApps">All apps</String>
+    <String Key="Loc.Timeline.Filter.AllSources">All sources</String>
+    <String Key="Loc.Timeline.Filter.Automatic">Automatic</String>
+    <String Key="Loc.Timeline.Filter.Manual">Manual</String>
 
     <!-- Session end reasons -->
     <String Key="Loc.Session.Reason.None">—</String>
@@ -194,7 +215,6 @@
     <String Key="Loc.Settings.DailySummary">Daily summary time</String>
     <String Key="Loc.Settings.Hour">h</String>
     <String Key="Loc.Settings.DailySummaryHint">m (daily summary fires at this time)</String>
-    <String Key="Loc.Settings.SaveWindowTitles">Save window titles (may contain sensitive info)</String>
     <String Key="Loc.Settings.Theme">Theme</String>
     <String Key="Loc.Settings.Section.Data">Data management</String>
     <String Key="Loc.Settings.OpenData">Open data directory</String>
@@ -204,7 +224,22 @@
     <String Key="Loc.Settings.ClearHistory">Clear all history</String>
     <String Key="Loc.Settings.AutoSaved">Settings saved</String>
     <String Key="Loc.Settings.BackupSaved">Backup saved: {0}</String>
-    <String Key="Loc.Settings.BackupRestored">Backup restored, please restart the app</String>
+    <String Key="Loc.Settings.BackupFailed">Failed to create backup: {0}</String>
+    <String Key="Loc.Settings.RestoreConfirmTitle">Restore backup</String>
+    <String Key="Loc.Settings.RestoreConfirm">Restoring will overwrite current data and exit the app. Continue?</String>
+    <String Key="Loc.Settings.BackupRestoredExit">Backup restored. The app will now exit; restart it to load the backup.</String>
+    <String Key="Loc.Settings.RestoreFailed">Failed to restore backup: {0}</String>
+    <String Key="Loc.Settings.RestoreFailedResumed">Backup restore failed; listening has resumed: {0}</String>
+    <String Key="Loc.Settings.HotkeyFailed">Could not register hotkey "{0}". It may be used by another app; choose a different combo.</String>
+    <String Key="Loc.Settings.InvalidNumber">Value outside the allowed range: {0}. Non-numeric input is outlined in red; changes are saved only after correction.</String>
+    <String Key="Loc.Settings.Range.Idle">1–120 minutes</String>
+    <String Key="Loc.Settings.Range.ShortSwitch">0–60 seconds</String>
+    <String Key="Loc.Settings.Range.Heartbeat">5–300 seconds</String>
+    <String Key="Loc.Settings.Range.AutoSave">5–3600 seconds</String>
+    <String Key="Loc.Settings.Range.History">7–3650 days</String>
+    <String Key="Loc.Settings.Range.DailySummary">hour 0–23, minute 0–59</String>
+    <String Key="Loc.Settings.ClearHistoryConfirmTitle">Clear all history</String>
+    <String Key="Loc.Settings.ClearHistoryConfirm">Delete all raw sessions and corrections? This cannot be undone; create a backup first.</String>
     <String Key="Loc.Settings.ValidateOk">Data validation passed</String>
     <String Key="Loc.Settings.ValidateIssues">Found {0} data issue(s)</String>
     <String Key="Loc.Settings.HistoryCleared">History and corrections cleared</String>
@@ -217,8 +252,11 @@
     <String Key="Loc.Tray.Pause">Pause listening</String>
     <String Key="Loc.Tray.Resume">Resume listening</String>
     <String Key="Loc.Tray.Private">Toggle private mode</String>
+    <String Key="Loc.Tray.PrivateOn">Exit private mode</String>
     <String Key="Loc.Tray.Add">Add current app</String>
     <String Key="Loc.Tray.Exit">Exit</String>
+    <String Key="Loc.Tray.HintTitle">App Usage Tracker is still running</String>
+    <String Key="Loc.Tray.HintMessage">The window is hidden to the system tray and tracking continues. Right-click the tray icon to show the window or exit.</String>
 
     <!-- Usage reminders & daily summary -->
     <String Key="Loc.Notify.ReminderTitle">Usage reminder</String>

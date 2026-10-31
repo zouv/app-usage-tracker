@@ -353,6 +353,251 @@ public sealed class ActivitySessionServiceTests
         Assert.Equal(runningApp.Id, service.Snapshot.ActiveApps[0].App.Id);
     }
 
+    [Fact]
+    public async Task RecoveredOpenSessionAcrossMidnightIsSplit()
+    {
+        var localStart = DateTime.SpecifyKind(
+            new DateTime(2026, 8, 10, 23, 59, 30),
+            DateTimeKind.Local);
+        var localHeartbeat = localStart.AddMinutes(1);
+        var open = new ActivitySession
+        {
+            ApplicationId = Guid.NewGuid(),
+            StartedAtUtc = localStart.ToUniversalTime(),
+            LastHeartbeatAtUtc = localHeartbeat.ToUniversalTime(),
+        };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            new FakeTimeProvider(localHeartbeat.AddHours(1).ToUniversalTime()));
+
+        await service.StartAsync(new AppDataState { Sessions = [open] });
+
+        var recovered = service.Sessions
+            .Where(item => item.State == ActivityState.Active)
+            .ToList();
+        Assert.Equal(2, recovered.Count);
+        Assert.Equal(60, recovered.Sum(item => item.DurationSeconds));
+        Assert.Equal(SessionEndReason.Midnight, recovered[0].EndReason);
+    }
+
+    [Fact]
+    public async Task IdleSessionAcrossMidnightIsSplit()
+    {
+        var localStart = DateTime.SpecifyKind(
+            new DateTime(2026, 8, 10, 23, 59, 30),
+            DateTimeKind.Local);
+        var time = new FakeTimeProvider(localStart.ToUniversalTime());
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            time);
+        await service.StartAsync(new AppDataState
+        {
+            Apps = [app],
+            Settings = new AppSettings { ExcludeIdleTime = true },
+        });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(10));
+        await service.SetIdleAsync(true);
+        time.Advance(TimeSpan.FromMinutes(1));
+        await service.SetIdleAsync(false);
+
+        var idleSessions = service.Sessions
+            .Where(item => item.State == ActivityState.Idle)
+            .ToList();
+        Assert.Equal(2, idleSessions.Count);
+        Assert.Equal(60, idleSessions.Sum(item => item.DurationSeconds));
+        Assert.Equal(SessionEndReason.Midnight, idleSessions[0].EndReason);
+    }
+
+    [Fact]
+    public async Task ShortSwitchMergeKeepsIdleStateSession()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            time);
+        await service.StartAsync(new AppDataState
+        {
+            Apps = [app],
+            Settings = new AppSettings { ShortSwitchSeconds = 5, ExcludeIdleTime = true },
+        });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(10));
+        await service.HandleForegroundWindowAsync(Window("other.exe", 2));
+        time.Advance(TimeSpan.FromMilliseconds(500));
+        await service.SetIdleAsync(true);
+        time.Advance(TimeSpan.FromSeconds(1));
+        await service.SetIdleAsync(false);
+        time.Advance(TimeSpan.FromMilliseconds(500));
+
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 3));
+
+        Assert.Contains(service.Sessions, item => item.State == ActivityState.Idle);
+        Assert.Single(service.Sessions, item => item.ApplicationId == app.Id && item.EndedAtUtc is null);
+    }
+
+    [Fact]
+    public async Task SessionsSnapshotCannotMutateServiceState()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            time);
+        await service.StartAsync(new AppDataState { Apps = [app] });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+
+        var snapshot = service.Sessions;
+        snapshot[0].DurationSeconds = 9999;
+        Assert.NotEqual(9999, service.Sessions[0].DurationSeconds);
+    }
+
+    [Fact]
+    public async Task DisablingAppEndsItsForegroundSessionImmediately()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            time);
+        await service.StartAsync(new AppDataState { Apps = [app] });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(10));
+
+        app.Enabled = false;
+        await service.UpdateAppsAsync([app]);
+
+        var session = Assert.Single(service.Sessions);
+        Assert.NotNull(session.EndedAtUtc);
+        Assert.Equal(10, session.DurationSeconds);
+        Assert.Empty(service.Snapshot.ActiveApps);
+    }
+
+    [Fact]
+    public async Task RunningProcessScanOnlyNeededWhenEnabledRunningAppExists()
+    {
+        var app = new TrackedApp
+        {
+            Name = "Daemon",
+            ProcessName = "daemon.exe",
+            TrackingMode = TrackingMode.Running,
+        };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            new FakeTimeProvider(DateTime.UtcNow));
+
+        await service.StartAsync(new AppDataState { Apps = [app] });
+        Assert.True(service.ShouldScanRunningProcesses);
+
+        await service.SetPausedAsync(true);
+        Assert.False(service.ShouldScanRunningProcesses);
+
+        await service.SetPausedAsync(false);
+        app.Enabled = false;
+        await service.UpdateAppsAsync([app]);
+        Assert.False(service.ShouldScanRunningProcesses);
+    }
+
+    [Fact]
+    public async Task ResumeAfterStopWithoutSavingRestartsTracking()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState { Apps = [app] });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        await service.StopWithoutSavingAsync();
+
+        Assert.Equal(ActivityState.Stopped, service.Snapshot.State);
+        await service.ResumeAsync();
+
+        Assert.Equal(ActivityState.Active, service.Snapshot.State);
+        Assert.Equal(app.Id, service.Snapshot.CurrentApp?.Id);
+        Assert.Empty(store.SavedSessions);
+    }
+
+    [Fact]
+    public async Task StopAlwaysPersistsEvenRightAfterAnotherSave()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var store = new MemoryAppDataStore();
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        using var service = new ActivitySessionService(store, new ApplicationMatcher(), time);
+        await service.StartAsync(new AppDataState
+        {
+            Apps = [app],
+            Settings = new AppSettings { AutoSaveSeconds = 3600 },
+        });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(1));
+
+        await service.StopAsync();
+
+        Assert.Single(store.SavedSessions);
+        Assert.Equal(SessionEndReason.ApplicationExit, store.SavedSessions[0].EndReason);
+    }
+
+    [Fact]
+    public async Task RunningProcessScanNamesCoverProcessRelatedAndPathRules()
+    {
+        var app = new TrackedApp
+        {
+            Name = "Daemon",
+            ProcessName = "daemon.exe",
+            ExecutablePath = @"C:\Tools\daemon.exe",
+            TrackingMode = TrackingMode.Running,
+            RelatedProcessNames = ["daemon-helper.exe"],
+            MatchRules =
+            [
+                new MatchRule { Type = MatchRuleType.ProcessName, Pattern = "daemon-worker.exe" },
+            ],
+        };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            new FakeTimeProvider(DateTime.UtcNow));
+        await service.StartAsync(new AppDataState { Apps = [app] });
+
+        var names = service.RunningProcessScanNames;
+
+        Assert.Contains("daemon", names);
+        Assert.Contains("daemon-helper", names);
+        Assert.Contains("daemon-worker", names);
+        Assert.DoesNotContain("chrome", names);
+    }
+
+    [Fact]
+    public async Task TurningOffIdleExclusionResumesForegroundSession()
+    {
+        var time = new FakeTimeProvider(DateTime.UtcNow);
+        var app = new TrackedApp { Name = "Editor", ProcessName = "editor.exe" };
+        var settings = new AppSettings { ExcludeIdleTime = true };
+        using var service = new ActivitySessionService(
+            new MemoryAppDataStore(),
+            new ApplicationMatcher(),
+            time);
+        await service.StartAsync(new AppDataState { Apps = [app], Settings = settings });
+        await service.HandleForegroundWindowAsync(Window("editor.exe", 1));
+        time.Advance(TimeSpan.FromSeconds(5));
+        await service.SetIdleAsync(true);
+        Assert.Equal(ActivityState.Idle, service.Snapshot.State);
+
+        settings.ExcludeIdleTime = false;
+        await service.ReevaluateAsync();
+
+        Assert.Equal(ActivityState.Active, service.Snapshot.State);
+        Assert.Single(service.Snapshot.ActiveApps);
+    }
+
     private static RunningProcessInfo Process(string processName) =>
         new(1, processName, string.Empty, string.Empty);
 }

@@ -50,6 +50,19 @@ public class ChartBuilderTests
     }
 
     [Fact]
+    public void BuildTimeline_ClipsSessionCrossingMidnightToToday()
+    {
+        var app = new TrackedApp { Name = "编辑器" };
+        // 23:58 开始、持续 4 分钟：今天只应显示 00:00-00:02 的 120 秒。
+        var session = Session(app.Id, Day.AddDays(-1).AddHours(23).AddMinutes(58), 240);
+
+        var chart = ChartBuilder.BuildTimeline([session], [app], Day);
+
+        Assert.Equal(120, chart.Slots.Sum(slot => slot.TotalSeconds));
+        Assert.Equal("00:00", chart.Slots.First(slot => slot.TotalSeconds > 0).RangeStart);
+    }
+
+    [Fact]
     public void BuildTimeline_OrdersSeriesByTotalDescending()
     {
         var small = new TrackedApp { Name = "小" };

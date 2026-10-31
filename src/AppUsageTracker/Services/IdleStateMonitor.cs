@@ -50,7 +50,9 @@ public sealed class IdleStateMonitor : IIdleStateMonitor
             return;
         }
 
-        var elapsedMilliseconds = NativeMethods.GetTickCount64() - info.Time;
+        var elapsedMilliseconds = CalculateElapsedMilliseconds(
+            NativeMethods.GetTickCount64(),
+            info.Time);
         IdleDuration = TimeSpan.FromMilliseconds(elapsedMilliseconds);
         var idle = IdleDuration >= TimeSpan.FromMinutes(Math.Max(1, ThresholdMinutes));
         if (idle == IsIdle)
@@ -61,4 +63,11 @@ public sealed class IdleStateMonitor : IIdleStateMonitor
         IsIdle = idle;
         IdleStateChanged?.Invoke(this, idle);
     }
+
+    /// <summary>
+    /// GetLastInputInfo.Time 是 32 位 tick，系统运行超过 49.7 天后会回绕；
+    /// 用无符号差值取模，避免把回绕当成“空闲了几十天”。
+    /// </summary>
+    internal static uint CalculateElapsedMilliseconds(ulong nowTicks, uint lastInputTicks) =>
+        unchecked((uint)(nowTicks - lastInputTicks));
 }

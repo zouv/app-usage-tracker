@@ -68,8 +68,22 @@
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc.Statistics.Total}" Style="{StaticResource Text.Muted}" />
                     <TextBlock Text="{Binding TotalDuration}" Style="{StaticResource Text.StatValue}" Margin="0,8,0,2" />
-                    <TextBlock Text="{Binding ChangeText}" Foreground="{DynamicResource Brush.Success}"
-                               FontSize="{StaticResource FontSize.Caption}" />
+                    <TextBlock Text="{Binding ChangeText}"
+                               FontSize="{StaticResource FontSize.Caption}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Muted}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ChangeKind}" Value="success">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Success}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ChangeKind}" Value="danger">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0">
@@ -149,64 +163,79 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="{DynamicResource Loc.Statistics.Ranking}" Style="{StaticResource Text.SectionTitle}" />
-                    <!--
-                        排行榜行的时长文字原本会贴到滚动条轨道，没有呼吸感。
-                        给 ItemsControl 加 Margin.Right=14：内容右缩 14px，
-                        滚动条出现在 ScrollViewer 右边缘，与时长文字之间留出 14px 空白。
-                    -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Margin="0,12,0,0">
-                        <ItemsControl ItemsSource="{Binding Ranking}" Margin="0,0,14,0">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource Button.Ghost}"
-                                            Padding="0,2" MinHeight="0"
-                                            HorizontalContentAlignment="Stretch"
-                                            Command="{Binding DataContext.SelectAppCommand,
-                                            RelativeSource={RelativeSource
-                                            AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}">
-                                        <Grid Margin="0,4">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="34" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Grid Width="28" Height="28">
-                                                <Border CornerRadius="5"
-                                                        Background="{Binding ColorBrush}"
-                                                        Visibility="{Binding HasIcon,
-                                                        Converter={StaticResource
-                                                        InverseBoolToVisibility}}">
-                                                    <TextBlock Text="{Binding Initials}"
-                                                               Foreground="White" FontSize="11"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center" />
-                                                </Border>
-                                                <Image Source="{Binding Icon}"
-                                                       Width="24" Height="24"
-                                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                                       Visibility="{Binding HasIcon,
-                                                       Converter={StaticResource
-                                                       BoolToVisibility}}" />
-                                            </Grid>
-                                            <StackPanel Grid.Column="1" Margin="7,0">
-                                                <TextBlock Text="{Binding Name}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           TextWrapping="NoWrap" />
-                                                <ProgressBar Value="{Binding Percentage}"
-                                                             Maximum="100" Height="4"
-                                                             Margin="0,6,0,0"
-                                                             Foreground="{Binding ColorBrush}" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="2" Text="{Binding Duration}"
+                    <!-- 内容右侧留出滚动条空间，避免时长文字贴住轨道。 -->
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Ranking}"
+                             SelectedItem="{Binding SelectedAppRow, Mode=TwoWay}"
+                             SelectionMode="Single" Margin="0,12,14,0"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0,2" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    Padding="{TemplateBinding Padding}" CornerRadius="5">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource Brush.PrimarySoft}" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="34" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Width="28" Height="28">
+                                        <Border CornerRadius="5"
+                                                Background="{Binding ColorBrush}"
+                                                Visibility="{Binding HasIcon,
+                                                Converter={StaticResource
+                                                InverseBoolToVisibility}}">
+                                            <TextBlock Text="{Binding Initials}"
+                                                       Foreground="White" FontSize="11"
+                                                       HorizontalAlignment="Center"
                                                        VerticalAlignment="Center" />
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                                        </Border>
+                                        <Image Source="{Binding Icon}"
+                                               Width="24" Height="24"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               Visibility="{Binding HasIcon,
+                                               Converter={StaticResource
+                                               BoolToVisibility}}" />
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" Margin="7,0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   TextWrapping="NoWrap" />
+                                        <ProgressBar Value="{Binding Percentage}"
+                                                     Maximum="100" Height="4"
+                                                     Margin="0,6,0,0"
+                                                     Foreground="{Binding ColorBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Duration}"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                     <TextBlock Grid.Row="2" Text="{Binding SelectedAppDetail}"
                                Style="{StaticResource Text.Muted}" Margin="0,12,0,0" />
                 </Grid>

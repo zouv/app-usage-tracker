@@ -24,13 +24,32 @@ public partial class MainViewModel : ObservableObject
         Settings = settings;
         SelectedPage = Overview;
         _runtime.SnapshotChanged += (_, snapshot) =>
-            App.Current.Dispatcher.Invoke(() =>
+        {
+            var dispatcher = App.Current.Dispatcher;
+            if (dispatcher.CheckAccess())
             {
-                ListenerStatus = StatusText(snapshot.State);
-                IsPrivateMode = snapshot.IsPrivateMode;
-            });
-        LocalizationService.LanguageChanged += (_, _) =>
-            ListenerStatus = StatusText(_runtime.Snapshot.State);
+                ApplyListenerState(snapshot);
+                return;
+            }
+
+            dispatcher.BeginInvoke(() => ApplyListenerState(snapshot));
+        };
+        LocalizationService.LanguageChanged += (_, _) => ListenerStatus = StatusText(_runtime.Snapshot.State);
+        ApplyListenerState(_runtime.Snapshot);
+    }
+
+    private void ApplyListenerState(TrackingSnapshot snapshot)
+    {
+        ListenerStatus = StatusText(snapshot.State);
+        ListenerStatusKind = snapshot.State switch
+        {
+            Models.ActivityState.Paused or Models.ActivityState.Private => "warning",
+            Models.ActivityState.Idle or Models.ActivityState.Locked
+                or Models.ActivityState.Suspended => "warning",
+            Models.ActivityState.Stopped => "muted",
+            _ => "success",
+        };
+        IsPrivateMode = snapshot.IsPrivateMode;
     }
 
     private static string StatusText(Models.ActivityState state) =>
@@ -39,6 +58,9 @@ public partial class MainViewModel : ObservableObject
             Models.ActivityState.Paused => "Loc.Status.Paused",
             Models.ActivityState.Private => "Loc.Status.Private",
             Models.ActivityState.Stopped => "Loc.Status.Stopped",
+            Models.ActivityState.Idle => "Loc.State.Idle",
+            Models.ActivityState.Locked => "Loc.State.Locked",
+            Models.ActivityState.Suspended => "Loc.State.Suspended",
             _ => "Loc.Status.Running",
         });
 
@@ -63,6 +85,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isPrivateMode;
+
+    [ObservableProperty]
+    private string _listenerStatusKind = "success";
 
     [RelayCommand]
     private void Navigate(string page)

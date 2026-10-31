@@ -163,8 +163,22 @@
                                 Padding="12,8"
                                 ToolTip="{DynamicResource Loc.Nav.PrivateModeTooltip}">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="7" Height="7" Fill="{DynamicResource Brush.Success}"
-                                         VerticalAlignment="Center" />
+                                <Ellipse Width="7" Height="7"
+                                         VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="{DynamicResource Brush.Success}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ListenerStatusKind}" Value="warning">
+                                                    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding ListenerStatusKind}" Value="muted">
+                                                    <Setter Property="Fill" Value="{DynamicResource Brush.Faint}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
                                 <TextBlock Text="{Binding ListenerStatus}" Margin="9,0,0,0"
                                            FontSize="{StaticResource FontSize.Caption}"
                                            Foreground="{DynamicResource Brush.Muted}" />

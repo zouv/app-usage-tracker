@@ -119,4 +119,33 @@ public sealed class JsonAppDataStoreTests
 
         Assert.Equal(12, state.Settings.IdleThresholdMinutes);
     }
+
+    [Fact]
+    public async Task BackupContainsOnlyBusinessDataAndImportIgnoresOtherFiles()
+    {
+        using var sourcePaths = new TestDataPathProvider();
+        using var targetPaths = new TestDataPathProvider();
+        using var backupDirectory = new TestDataPathProvider();
+        var source = new JsonAppDataStore(sourcePaths);
+        var target = new JsonAppDataStore(targetPaths);
+        await source.SaveSettingsAsync(new AppSettings { IdleThresholdMinutes = 12 });
+        await source.SaveSettingsAsync(new AppSettings { IdleThresholdMinutes = 13 });
+        Directory.CreateDirectory(Path.Combine(sourcePaths.RootDirectory, "logs"));
+        await File.WriteAllTextAsync(Path.Combine(sourcePaths.RootDirectory, "logs", "app.log"), "private log");
+
+        var backup = await source.CreateBackupAsync(backupDirectory.RootDirectory);
+
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(backup))
+        {
+            Assert.Equal(["usage_config.json"], archive.Entries.Select(entry => entry.FullName).ToArray());
+        }
+
+        await File.WriteAllTextAsync(Path.Combine(targetPaths.RootDirectory, "startup-error.log"), "keep");
+        await target.ImportBackupAsync(backup);
+        var state = await target.LoadAsync();
+
+        Assert.Equal(13, state.Settings.IdleThresholdMinutes);
+        Assert.False(File.Exists(Path.Combine(targetPaths.RootDirectory, "usage_config.json.bak")));
+        Assert.Equal("keep", await File.ReadAllTextAsync(Path.Combine(targetPaths.RootDirectory, "startup-error.log")));
+    }
 }

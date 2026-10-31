@@ -49,7 +49,7 @@ AppRuntime（共享单例）
 | 数据持久化 | `Services/JsonAppDataStore*`、`Models/` | XAML 页面 |
 | 统计查询 | `Services/StatisticsService*`、统计模型和测试 | Win32 封装 |
 | 软件管理 | `Views/AppsView*`、`ViewModels/AppsViewModel*`、`TrackedApp*` | 时间线编辑 |
-| 构建发布 | `manager.sh`、`*.csproj`、`AppUsageTracker.sln` | 业务服务 |
+| 构建发布 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1`、`*.csproj` | 业务服务 |
 | 产品范围 | `docs/design/software-usage-duration-design.md` | 生成目录 |
 
 ## 1. 当前文件职责
@@ -88,6 +88,8 @@ AppRuntime（共享单例）
 | `tools/capture-ui.ps1` | 已有 | 启动应用、切页并截图，供 UI 实跑核对 |
 | `docs/design/` | 已有 | 产品、技术和界面设计 |
 | `manager.sh` | 已有 | build/start/test/icon/pack/clean/release 统一入口 |
+| `scripts/` | 已有 | BAT 的 PowerShell 实现：构建、测试、运行状态、正常停止、安全清理与暂存发布；运行记录位于 `.runtime/desktop.json` |
+| 根目录 `*.bat` | 已有 | Windows 薄入口，经 `_ps.bat` 统一选择 PowerShell、转发参数与退出码 |
 
 ## 2. 按「我要做什么」反查代码位置（任务 → 入口）
 
@@ -99,7 +101,7 @@ AppRuntime（共享单例）
 | 正常退出与会话收尾 | `App.xaml.cs`、`Services/ActivitySessionService.cs` | `App.ExitApplication`、`ActivitySessionService.StopAsync` |
 | 主窗口导航与页面承载 | `MainWindow.xaml`、`ViewModels/MainViewModel.cs` | 页面导航属性与命令 |
 | 前台窗口监听 | `Services/ForegroundWindowMonitor.cs`、`ApplicationMatcher.cs` | WinEventHook 封装、软件匹配入口 |
-| Running 模式进程扫描 | `Services/ProcessScanner.cs`、`TrackingCoordinator.cs` | `EnumerateRunningProcesses`、`MatchRunningProcess`、`HandleRunningProcessesAsync` |
+| Running 模式进程扫描 | `Services/ProcessScanner.cs`、`TrackingCoordinator.cs` | `ShouldScanRunningProcesses`、`EnumerateRunningProcesses`、`MatchRunningProcess`、`HandleRunningProcessesAsync` |
 | 活动会话状态机与恢复 | `Services/ActivitySessionService.cs` | `HandleRunningProcessesAsync`、`RecoverOpenSessions`、`StopAsync` |
 | 数据加载与原子保存 | `Services/JsonAppDataStore.cs` | `LoadAsync`、`WriteAtomicAsync` |
 | 统计图表数据组装 | `ViewModels/ChartBuilder.cs`、`StatisticsViewModel.cs` | `BuildDaily`、`BuildWeekly`、`BuildByApp` |
@@ -108,8 +110,9 @@ AppRuntime（共享单例）
 | 明暗主题与资源字典 | `Services/ThemeService.cs`、`App.xaml`、`Themes/` | 调色板字典整体替换 |
 | 全局快捷键呼出 / 隐藏 | `Services/GlobalHotkeyService.cs`、`App.xaml.cs` | WM_HOTKEY 分发、`App.ToggleMainWindow` |
 | 托盘与通知 | `Services/TrayIconService.cs`、`UsageNotificationService.cs` | 托盘菜单、连续使用提醒、每日摘要 |
-| 会话编辑与导出 | `Services/SessionEditor.cs`、`CsvExportService.cs` | 补录、修改、合并、CSV 导出 |
-| 构建、发布与清理 | `manager.sh`、根目录 `*.bat` | `cmd_build`、`cmd_test`、`cmd_pack`、`cmd_release`、`cmd_clean` |
+| 会话编辑与导出 | `Services/SessionEditor.cs`、`CsvExportService.cs` | 补录、修改、合并、批量删除、CSV 导出；进行中会话会被拒绝 |
+| 列表选择与危险确认 | `Views/AppsView*`、`TimelineViewModel.cs`、`StatisticsViewModel.cs`、`IConfirmationService.cs` | DataGrid 单选样式、删除/合并确认、排行榜 `SelectedAppRow` 与刷新后选择协调 |
+| 构建、发布与清理 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1` | `cmd_build`、`cmd_test`、`cmd_pack`、`cmd_release`、`cmd_clean`；`dev.ps1`、`desktop.ps1`、`package.ps1` |
 
 ## 3. 关键链路
 
@@ -127,14 +130,15 @@ WinEventHook
 ### 3.1b 运行模式进程扫描（心跳驱动）
 
 ```text
-TrackingCoordinator.HeartbeatTimer
- -> IProcessScanner.EnumerateRunningProcesses()
+TrackingCoordinator.HeartbeatTimer（重入保护）
+ -> IActivitySessionService.ShouldScanRunningProcesses？无启用运行模式软件/暂停/锁屏则跳过
+ -> IProcessScanner.EnumerateRunningProcesses(RunningProcessScanNames)（只查候选进程名，不读取窗口标题）
  -> ApplicationMatcher.MatchRunningProcess()（返回所有命中 TrackingMode.Running 的软件，忽略窗口标题规则）
- -> ActivitySessionService.HandleRunningProcessesAsync()
+ -> ActivitySessionService.HandleRunningProcessesAsync()（匹配集合未变化时直接返回）
  -> 前台命中与运行模式软件并行累计：同一软件只计一次，多软件各自独立会话
 ```
 
-多软件并发累计：`ActivitySessionService` 按软件 Id 维护多条进行中的 Active 会话（`_appSessions` 字典），全局状态会话（空闲/锁屏/休眠/暂停/隐私）单独一条。前台命中优先作为快照主显示项，与后台运行软件同时各自累计；锁屏/休眠/暂停/隐私一次性结束全部软件会话。快照 `TrackingSnapshot.ActiveApps` 携带全部活跃软件（含来源模式），`CurrentApp/CurrentSession` 保留为主显示项（供托盘/通知/添加软件等单值消费）。
+多软件并发累计：`ActivitySessionService` 按软件 Id 维护多条进行中的 Active 会话（`_appSessions` 字典），全局状态会话（空闲/锁屏/休眠/暂停）单独一条；隐私模式只作为阻断态，不写状态会话。前台命中优先作为快照主显示项，与后台运行软件同时各自累计；锁屏/休眠/暂停/隐私一次性结束全部软件会话。快照 `TrackingSnapshot.ActiveApps` 携带全部活跃软件（含来源模式），`CurrentApp/CurrentSession` 保留为主显示项（供托盘/通知/添加软件等单值消费）。
 
 ### 3.2 空闲和系统状态
 
@@ -191,6 +195,14 @@ App.ExitApplication
  -> ActivitySessionService.StopAsync
  -> 保存设置 / 软件 / 会话 / 修正
  -> 释放托盘、系统监听与单实例互斥体
+
+Windows 注销 / 关机（SessionEnding）
+ -> 同步等待 AppRuntime.DisposeAsync（最多 5 秒），不依赖 async void 退出链
+
+关闭窗口（MinimizeToTrayOnClose=false）→ MainWindow.OnClosing → App.ExitApplication
+恢复备份 → AppRuntime.PrepareForRestoreAsync（停协调器 + StopWithoutSaving）
+        → JsonAppDataStore.ImportBackupAsync → App.ExitWithoutSaving
+        → 导入失败则 ActivitySessionService.ResumeAsync + TrackingCoordinator.Start 续听
 ```
 
 ## 4. 数据契约
@@ -203,10 +215,12 @@ App.ExitApplication
 | `StartedAtUtc` | UTC 开始时间 |
 | `EndedAtUtc` | UTC 结束时间，可在活动中为空 |
 | `DurationSeconds` | 使用单调时间计算 |
-| `ActivityType` | Effective、Foreground、Running 等 |
-| `EndReason` | WindowChanged、Idle、Locked、Paused 等 |
-| `LastHeartbeatAtUtc` | 异常恢复上界 |
+| `State` | Active、Idle、Locked、Suspended、Paused 等；来源统计模式记录在 `ActiveAppInfo.SourceMode` |
+| `EndReason` | WindowChanged、Idle、Locked、Paused、Midnight、Recovered 等 |
+| `LastHeartbeatAtUtc` | 异常恢复上界，也是实时时长的增量基准 |
 | `IsManual` | 是否由用户补录或修改 |
+
+> 会话集合只能通过 `IActivitySessionService` 的快照与编辑入口访问：读取用 `Sessions`（深拷贝）或 `AppRuntime.GetLiveSessionsSnapshot()`，修改用 `EditSessionsAsync` / `ClearSessionsAsync`。进行中的会话不允许手工编辑或删除。
 
 ### TrackingSnapshot
 
@@ -234,9 +248,11 @@ App.ExitApplication
 | 入口 | 职责 |
 | --- | --- |
 | `manager.sh` | build/start/test/icon/pack/release/clean/help 统一入口；版本号写入主项目 csproj |
-| `build.bat`、`test.bat`、`ci.bat` | Windows 构建与测试包装；`ci.bat` 禁用 MSBuild/Roslyn 常驻服务器 |
-| `publish.bat` | 单文件发布与产物回退检查，保留 GenerateBundle、相对输出路径等项目专用处理 |
-| `clean.bat` | Windows 清理入口 |
+| `_ps.bat`、`scripts/_common.ps1` | BAT 公共入口与 PowerShell 公共路径、进程、运行记录和受管删除 helpers；自动化用 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停 |
+| `build.bat`、`test.bat` | 调用 `scripts/build.ps1`、`test.ps1`；支持配置与追加 dotnet 参数，测试遍历所有测试项目 |
+| `run.bat`、`dev.bat`、`stop.bat`、`status.bat` | 调用 `scripts/desktop.ps1`、`dev.ps1`；开发入口先正常停止再构建 Debug；启动时写 `.runtime/desktop.json`，停止只请求正常关闭并等待，绝不强杀 |
+| `publish.bat`、`package.bat` | 调用 `scripts/package.ps1`；暂存发布、验证单文件后替换 `dist/`，替换失败回滚旧产物 |
+| `clean.bat`、`ci.bat` | 调用 `scripts/clean.ps1`；清理拒绝运行实例、越界路径和 reparse point，CI 禁用常驻构建服务器并跳过子 BAT 暂停 |
 | `tools/generate-icon.ps1` | 可重现地生成应用图标 |
 | `tools/capture-ui.ps1` | 启动、切页与截图，辅助 UI 实跑核对 |
 | `check-docs.sh` | 文档机械检查；`--hook` 供 Claude PostToolUse 调用 |
@@ -268,7 +284,25 @@ App.ExitApplication
 - **圆角只能用两档**：`Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）；不要硬编码 7、4 等值。
 - **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。
 
+- **局部 DataGridRow 样式必须继承全局隐式样式**：需要 ToolTip 等局部 Setter 时使用 `BasedOn="{StaticResource {x:Type DataGridRow}}"`，否则会丢失全局 hover/IsSelected 反馈。单项命令对应的 DataGrid 显式使用 Single + FullRow。
+- **危险操作必须通过可替换确认入口**：软件删除、时间记录删除/合并/清除当日统一走 `IConfirmationService`；只有明确确认才调用编辑服务，取消与关闭均不得改数据。
+- **统计排行榜选择使用稳定软件 Id 协调**：`SelectedAppRow` 是当前选择，刷新后按 `ApplicationId` 重绑定并重算详情；切周期/日期立即清空，不能只保留可能过期的详情字符串。
+
+- **BAT 停止脚本不得强杀应用**：`desktop.ps1` 只发送正常关闭请求；若应用按设置最小化到托盘，等待超时后提示从托盘退出，不得改用 `taskkill /F`。
+- **Windows 清理与发布只操作仓库内受管路径**：删除前拒绝 reparse point；`package.ps1` 必须先暂存并验证单文件，再推广到 `dist/`，不要在发布前删除旧产物。
+
 - **取进程路径不能只靠 `Process.MainModule`**：受保护或位数不匹配的进程会拒绝访问；统一使用 `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) + QueryFullProcessImageName` 回退，现有实现位于 `ProcessScanner.TryGetPath` 与 `ForegroundWindowMonitor.QueryPath`。
 - **分类持久化值与显示文案分离**：`TrackedApp.Category` 保持中文稳定值；筛选下拉使用「稳定值 + 本地化标签」的 `OptionItem`，不要比较界面文案。
 - **被 `CollectionView` 包装的集合必须回 Dispatcher 更新**：测试并行执行或后台回调中直接修改会抛跨线程异常；无 `Application` 的测试环境可跳过 UI 刷新。
 - **DatePicker/Calendar 主题必须显式接线**：`DatePicker.CalendarStyle → Calendar.Style → CalendarItemStyle/CalendarDayButtonStyle/CalendarButtonStyle` 整条链不能缺；ComboBox 收起框显式设置 `VerticalContentAlignment="Center"`。
+- **会话集合不是线程安全的公开 List**：后台心跳/前台事件在写，UI 与统计在读。读取一律用 `AppRuntime.Sessions`（深拷贝快照）或 `GetLiveSessionsSnapshot()`；修改一律经 `IActivitySessionService.EditSessionsAsync`/`ClearSessionsAsync`，不要在 UI 或 `SessionEditor` 里直接 `Add/Remove/Clear`。
+- **进行中的会话不能手工编辑、删除或合并**：`SessionEditor` 会拒绝；时间记录页先判断 `EndedAtUtc` 并给出提示，否则会与状态机里的同一对象失去同步。
+- **关闭窗口必须走完整退出链**：`MinimizeToTrayOnClose=false` 时由 `MainWindow.OnClosing` 转调 `App.ExitApplication`；直接让窗口关闭会绕过 `StopAsync` 和会话落盘。
+- **恢复备份先停写**：`PrepareForRestoreAsync` 会停止协调器并以 `StopWithoutSavingAsync` 结束内存会话；导入后必须 `ExitWithoutSaving()`，否则退出流程会用旧数据覆盖刚导入的文件。导入失败必须调用 `ResumeAfterRestoreFailureAsync` 续听。
+- **备份只包含五份业务 JSON**：`JsonAppDataStore.DataFiles` 是创建与导入的共同白名单，不打包日志、`.bak` 或临时文件；新增持久化文件时须同时评估是否加入该列表。
+- **进程扫描不要无条件跑**：只有 `ShouldScanRunningProcesses` 为真时才枚举进程；运行模式扫描不读取窗口标题，也不要恢复每次心跳都 `Process.GetProcesses()` 的旧实现。
+- **概览页每秒只做增量更新**：`UpdateLiveDurations` 只改活跃卡时长和今日总计；完整统计、排行与时间线只在 `DataChanged`/页面激活时重算。不要在 1 秒定时器里克隆全部会话。
+- **跨零点拆分会话必须覆盖所有完成路径**：正常窗口切换、空闲/锁屏状态会话、异常恢复都要调用 `SplitAcrossLocalMidnights`；只在 `CompleteAppSession` 里拆会漏掉恢复和状态会话。
+- **短切换合并只能清理已结束的软件会话**：不要把 `ApplicationId is null` 的空闲/锁屏状态会话或手工记录当作临时会话删除。
+- **`GetLastInputInfo.Time` 是 32 位 tick**：与 `GetTickCount64` 相减必须按 uint 取模（见 `IdleStateMonitor.CalculateElapsedMilliseconds`），否则系统运行超过约 49.7 天后会被误判为长期空闲。
+- **托盘 NotifyIcon 与 UI 刷新必须回 Dispatcher**：快照事件来自后台线程，`TrayIconService.Update` 与各 ViewModel 的刷新都通过 `Dispatcher.BeginInvoke` 合并执行；不要改回同步 `Dispatcher.Invoke` 阻塞监听线程。

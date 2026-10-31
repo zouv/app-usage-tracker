@@ -9,14 +9,17 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
 {
     private readonly NativeMethods.WinEventDelegate _callback;
     private readonly System.Timers.Timer _verificationTimer = new(2000) { AutoReset = true };
+    private readonly object _publishLock = new();
+    private long _requestVersion;
+    private long _publishedVersion;
     private nint _hook;
+    private bool _active;
     private bool _disposed;
 
     public ForegroundWindowMonitor()
     {
         _callback = OnWinEvent;
-        _verificationTimer.Elapsed += (_, _) =>
-            ThreadPool.QueueUserWorkItem(_ => Publish(ReadWindow(NativeMethods.GetForegroundWindow())));
+        _verificationTimer.Elapsed += (_, _) => VerifyForeground();
     }
 
     public event EventHandler<ForegroundWindowInfo?>? ForegroundWindowChanged;
@@ -30,6 +33,11 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
             return;
         }
 
+        lock (_publishLock)
+        {
+            _active = true;
+        }
+
         _hook = NativeMethods.SetWinEventHook(
             NativeMethods.EventSystemForeground,
             NativeMethods.EventSystemForeground,
@@ -38,19 +46,23 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
             0,
             0,
             NativeMethods.WineventOutofcontext);
-        Publish(ReadWindow(NativeMethods.GetForegroundWindow()));
+        QueueRead(NativeMethods.GetForegroundWindow());
         _verificationTimer.Start();
     }
 
     public void Stop()
     {
-        if (_hook == nint.Zero)
+        lock (_publishLock)
         {
-            return;
+            _active = false;
         }
 
-        NativeMethods.UnhookWinEvent(_hook);
-        _hook = nint.Zero;
+        if (_hook != nint.Zero)
+        {
+            NativeMethods.UnhookWinEvent(_hook);
+            _hook = nint.Zero;
+        }
+
         _verificationTimer.Stop();
     }
 
@@ -73,20 +85,74 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
         int objectId,
         int childId,
         uint eventThread,
-        uint eventTime)
-    {
-        ThreadPool.QueueUserWorkItem(_ => Publish(ReadWindow(window)));
-    }
+        uint eventTime) =>
+        QueueRead(window);
 
-    private void Publish(ForegroundWindowInfo? window)
+    /// <summary>兜底校验：窗口没变时只重读标题，避免每 2 秒重复打开进程、查询完整路径。</summary>
+    private void VerifyForeground()
     {
-        if (Current == window)
+        // 版本号在读取前分配：之后发生的真实窗口事件会拿到更大的版本并覆盖这次兜底结果。
+        var version = NextVersion();
+        var handle = NativeMethods.GetForegroundWindow();
+        var current = Current;
+        if (current is not null && current.WindowHandle == handle)
         {
+            var title = ReadTitle(handle);
+            if (!string.Equals(title, current.WindowTitle, StringComparison.Ordinal))
+            {
+                QueuePublish(current with { WindowTitle = title }, version);
+            }
+
             return;
         }
 
-        Current = window;
-        ForegroundWindowChanged?.Invoke(this, window);
+        QueueRead(handle, version);
+    }
+
+    private long NextVersion() => Interlocked.Increment(ref _requestVersion);
+
+    private void QueueRead(nint window) => QueueRead(window, NextVersion());
+
+    private void QueueRead(nint window, long version) =>
+        ThreadPool.QueueUserWorkItem(_ => Publish(ReadWindow(window), version));
+
+    private void QueuePublish(ForegroundWindowInfo? window, long version) =>
+        ThreadPool.QueueUserWorkItem(_ => Publish(window, version));
+
+    /// <summary>
+    /// 带版本号发布，丢弃比已发布结果更旧的异步读取，避免快速切换窗口时旧窗口覆盖新窗口。
+    /// 事件在锁内触发以保持与版本号一致的顺序；处理方只做入队与状态机调用，不会回调本监视器。
+    /// </summary>
+    private void Publish(ForegroundWindowInfo? window, long version)
+    {
+        lock (_publishLock)
+        {
+            if (!_active || version <= _publishedVersion)
+            {
+                return;
+            }
+
+            _publishedVersion = version;
+            if (Equals(Current, window))
+            {
+                return;
+            }
+
+            Current = window;
+            ForegroundWindowChanged?.Invoke(this, window);
+        }
+    }
+
+    private static string ReadTitle(nint window)
+    {
+        if (window == nint.Zero)
+        {
+            return string.Empty;
+        }
+
+        var titleBuffer = new StringBuilder(1024);
+        _ = NativeMethods.GetWindowText(window, titleBuffer, titleBuffer.Capacity);
+        return titleBuffer.ToString();
     }
 
     private static ForegroundWindowInfo? ReadWindow(nint window)
@@ -102,8 +168,7 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
             return null;
         }
 
-        var titleBuffer = new StringBuilder(1024);
-        _ = NativeMethods.GetWindowText(window, titleBuffer, titleBuffer.Capacity);
+        var title = ReadTitle(window);
         var executablePath = QueryPath(processId);
         var processName = string.Empty;
         try
@@ -124,7 +189,7 @@ public sealed class ForegroundWindowMonitor : IForegroundWindowMonitor
             (int)processId,
             processName,
             executablePath,
-            titleBuffer.ToString());
+            title);
     }
 
     private static string QueryPath(uint processId)

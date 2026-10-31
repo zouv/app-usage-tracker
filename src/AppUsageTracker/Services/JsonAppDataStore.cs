@@ -14,6 +14,10 @@ public sealed class JsonAppDataStore : IAppDataStore
     private const string AggregatesFile = "daily_aggregates.json";
     private const string CorrectionsFile = "manual_corrections.json";
 
+    /// <summary>备份只包含可恢复的业务数据，不携带日志、临时文件或二次备份。</summary>
+    private static readonly string[] DataFiles =
+    [SettingsFile, AppsFile, SessionsFile, AggregatesFile, CorrectionsFile];
+
     private readonly IAppDataPathProvider _pathProvider;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly JsonSerializerOptions _jsonOptions = new()
@@ -102,11 +106,24 @@ public sealed class JsonAppDataStore : IAppDataStore
         try
         {
             await Task.Run(
-                () => ZipFile.CreateFromDirectory(
-                    _pathProvider.RootDirectory,
-                    target,
-                    CompressionLevel.Optimal,
-                    false),
+                () =>
+                {
+                    using var stream = new FileStream(
+                        target,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None);
+                    using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+                    foreach (var fileName in DataFiles)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var path = Path.Combine(_pathProvider.RootDirectory, fileName);
+                        if (File.Exists(path))
+                        {
+                            archive.CreateEntryFromFile(path, fileName, CompressionLevel.Optimal);
+                        }
+                    }
+                },
                 cancellationToken);
         }
         finally
@@ -139,7 +156,13 @@ public sealed class JsonAppDataStore : IAppDataStore
                 foreach (var file in Directory.EnumerateFiles(importDirectory))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var destination = Path.Combine(_pathProvider.RootDirectory, Path.GetFileName(file));
+                    var fileName = Path.GetFileName(file);
+                    if (!DataFiles.Contains(fileName, StringComparer.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var destination = Path.Combine(_pathProvider.RootDirectory, fileName);
                     Directory.CreateDirectory(_pathProvider.RootDirectory);
                     File.Copy(file, destination, true);
                 }
@@ -240,10 +263,22 @@ public sealed class JsonAppDataStore : IAppDataStore
 
             if (File.Exists(path))
             {
-                File.Copy(path, backup, true);
+                try
+                {
+                    // File.Replace 在同卷上原子替换并顺带留下 .bak，避免再完整复制一份大文件。
+                    File.Replace(temporary, path, backup, ignoreMetadataErrors: true);
+                }
+                catch (Exception exception) when (
+                    exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+                {
+                    File.Copy(path, backup, true);
+                    File.Move(temporary, path, true);
+                }
             }
-
-            File.Move(temporary, path, true);
+            else
+            {
+                File.Move(temporary, path, true);
+            }
         }
         finally
         {

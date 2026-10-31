@@ -516,6 +516,7 @@
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Brush.PrimarySoft}" />
                 <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
         </Style.Triggers>
     </Style>

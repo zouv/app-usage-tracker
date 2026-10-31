@@ -19,10 +19,14 @@ public sealed class SessionEditor : ISessionEditor
         CancellationToken cancellationToken = default)
     {
         Validate(session);
-        session.IsManual = true;
-        session.DurationSeconds = CalculateDuration(session);
-        session.LastHeartbeatAtUtc = session.EndedAtUtc ?? session.StartedAtUtc;
-        _runtime.Sessions.Add(session);
+        PrepareManualSession(session);
+        await _runtime.ActivityService.EditSessionsAsync(
+            sessions =>
+            {
+                sessions.Add(session);
+                return session;
+            },
+            cancellationToken);
         _runtime.Corrections.Add(new ManualCorrection
         {
             SessionId = session.Id,
@@ -30,8 +34,7 @@ public sealed class SessionEditor : ISessionEditor
             After = session.Clone(),
             CreatedAtUtc = _timeProvider.UtcNow,
         });
-        await _runtime.SaveSessionsAndCorrectionsAsync(cancellationToken);
-        _runtime.NotifyDataChanged();
+        await SaveAndNotifyAsync(cancellationToken);
         return session;
     }
 
@@ -40,16 +43,23 @@ public sealed class SessionEditor : ISessionEditor
         CancellationToken cancellationToken = default)
     {
         Validate(session);
-        var index = _runtime.Sessions.FindIndex(item => item.Id == session.Id);
-        if (index < 0)
-        {
-            throw new KeyNotFoundException("会话不存在。");
-        }
+        PrepareManualSession(session);
+        var before = await _runtime.ActivityService.EditSessionsAsync(
+            sessions =>
+            {
+                var index = sessions.FindIndex(item => item.Id == session.Id);
+                if (index < 0)
+                {
+                    throw new KeyNotFoundException("会话不存在。");
+                }
 
-        var before = _runtime.Sessions[index].Clone();
-        session.IsManual = true;
-        session.DurationSeconds = CalculateDuration(session);
-        _runtime.Sessions[index] = session;
+                var existing = sessions[index];
+                EnsureCompleted(existing);
+                var previous = existing.Clone();
+                sessions[index] = session;
+                return previous;
+            },
+            cancellationToken);
         _runtime.Corrections.Add(new ManualCorrection
         {
             SessionId = session.Id,
@@ -58,28 +68,89 @@ public sealed class SessionEditor : ISessionEditor
             After = session.Clone(),
             CreatedAtUtc = _timeProvider.UtcNow,
         });
-        await _runtime.SaveSessionsAndCorrectionsAsync(cancellationToken);
-        _runtime.NotifyDataChanged();
+        await SaveAndNotifyAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var session = _runtime.Sessions.FirstOrDefault(item => item.Id == sessionId);
-        if (session is null)
+        var deleted = await _runtime.ActivityService.EditSessionsAsync(
+            sessions =>
+            {
+                var index = sessions.FindIndex(item => item.Id == sessionId);
+                if (index < 0)
+                {
+                    return null;
+                }
+
+                var existing = sessions[index];
+                EnsureCompleted(existing);
+                sessions.RemoveAt(index);
+                return existing.Clone();
+            },
+            cancellationToken);
+        if (deleted is null)
         {
             return;
         }
 
-        _runtime.Sessions.Remove(session);
         _runtime.Corrections.Add(new ManualCorrection
         {
-            SessionId = session.Id,
+            SessionId = deleted.Id,
             Operation = "Delete",
-            Before = session.Clone(),
+            Before = deleted,
             CreatedAtUtc = _timeProvider.UtcNow,
         });
-        await _runtime.SaveSessionsAndCorrectionsAsync(cancellationToken);
-        _runtime.NotifyDataChanged();
+        await SaveAndNotifyAsync(cancellationToken);
+    }
+
+    public async Task<int> DeleteRangeAsync(
+        IReadOnlyCollection<Guid> sessionIds,
+        CancellationToken cancellationToken = default)
+    {
+        var deleted = await _runtime.ActivityService.EditSessionsAsync(
+            sessions =>
+            {
+                var removed = new List<ActivitySession>();
+                foreach (var id in sessionIds.Distinct())
+                {
+                    var index = sessions.FindIndex(item => item.Id == id);
+                    if (index < 0)
+                    {
+                        continue;
+                    }
+
+                    var existing = sessions[index];
+                    if (existing.EndedAtUtc is null)
+                    {
+                        // 进行中的会话不在原始列表中直接删除，避免与状态机失去同步。
+                        continue;
+                    }
+
+                    sessions.RemoveAt(index);
+                    removed.Add(existing.Clone());
+                }
+
+                return removed;
+            },
+            cancellationToken);
+        if (deleted.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var session in deleted)
+        {
+            _runtime.Corrections.Add(new ManualCorrection
+            {
+                SessionId = session.Id,
+                Operation = "Delete",
+                Before = session,
+                CreatedAtUtc = _timeProvider.UtcNow,
+            });
+        }
+
+        await SaveAndNotifyAsync(cancellationToken);
+        return deleted.Count;
     }
 
     public async Task MergeAsync(
@@ -87,31 +158,67 @@ public sealed class SessionEditor : ISessionEditor
         Guid secondSessionId,
         CancellationToken cancellationToken = default)
     {
-        var first = _runtime.Sessions.FirstOrDefault(item => item.Id == firstSessionId);
-        var second = _runtime.Sessions.FirstOrDefault(item => item.Id == secondSessionId);
-        if (first is null || second is null || first.ApplicationId != second.ApplicationId)
-        {
-            throw new InvalidOperationException("只能合并同一软件的两个会话。");
-        }
+        var result = await _runtime.ActivityService.EditSessionsAsync(
+            sessions =>
+            {
+                var firstIndex = sessions.FindIndex(item => item.Id == firstSessionId);
+                var secondIndex = sessions.FindIndex(item => item.Id == secondSessionId);
+                if (firstIndex < 0 || secondIndex < 0)
+                {
+                    throw new KeyNotFoundException("会话不存在。");
+                }
 
-        var merged = first.Clone();
-        merged.StartedAtUtc = first.StartedAtUtc < second.StartedAtUtc
-            ? first.StartedAtUtc
-            : second.StartedAtUtc;
-        merged.EndedAtUtc = Later(first.EndedAtUtc, second.EndedAtUtc);
-        merged.DurationSeconds = first.DurationSeconds + second.DurationSeconds;
-        merged.IsManual = true;
-        _runtime.Sessions.Remove(first);
-        _runtime.Sessions.Remove(second);
-        _runtime.Sessions.Add(merged);
+                var first = sessions[firstIndex];
+                var second = sessions[secondIndex];
+                if (first.ApplicationId != second.ApplicationId)
+                {
+                    throw new InvalidOperationException("只能合并同一软件的两个会话。");
+                }
+
+                EnsureCompleted(first);
+                EnsureCompleted(second);
+
+                var merged = first.Clone();
+                merged.StartedAtUtc = first.StartedAtUtc < second.StartedAtUtc
+                    ? first.StartedAtUtc
+                    : second.StartedAtUtc;
+                merged.EndedAtUtc = Later(first.EndedAtUtc, second.EndedAtUtc);
+                merged.DurationSeconds = first.DurationSeconds + second.DurationSeconds;
+                merged.IsManual = true;
+                merged.LastHeartbeatAtUtc = merged.EndedAtUtc ?? merged.StartedAtUtc;
+                sessions.RemoveAll(item => item.Id == first.Id || item.Id == second.Id);
+                sessions.Add(merged);
+                return (First: first.Clone(), Merged: merged.Clone());
+            },
+            cancellationToken);
         _runtime.Corrections.Add(new ManualCorrection
         {
-            SessionId = merged.Id,
+            SessionId = result.Merged.Id,
             Operation = "Merge",
-            Before = first.Clone(),
-            After = merged.Clone(),
+            Before = result.First,
+            After = result.Merged,
             CreatedAtUtc = _timeProvider.UtcNow,
         });
+        await SaveAndNotifyAsync(cancellationToken);
+    }
+
+    private static void PrepareManualSession(ActivitySession session)
+    {
+        session.IsManual = true;
+        session.DurationSeconds = CalculateDuration(session);
+        session.LastHeartbeatAtUtc = session.EndedAtUtc ?? session.StartedAtUtc;
+    }
+
+    private static void EnsureCompleted(ActivitySession session)
+    {
+        if (session.EndedAtUtc is null)
+        {
+            throw new InvalidOperationException("进行中的会话不能修改或删除。");
+        }
+    }
+
+    private async Task SaveAndNotifyAsync(CancellationToken cancellationToken)
+    {
         await _runtime.SaveSessionsAndCorrectionsAsync(cancellationToken);
         _runtime.NotifyDataChanged();
     }
@@ -138,6 +245,11 @@ public sealed class SessionEditor : ISessionEditor
 
     private static void Validate(ActivitySession session)
     {
+        if (session.EndedAtUtc is null)
+        {
+            throw new InvalidDataException("手工会话必须有结束时间。");
+        }
+
         if (session.EndedAtUtc < session.StartedAtUtc)
         {
             throw new InvalidDataException("结束时间不能早于开始时间。");

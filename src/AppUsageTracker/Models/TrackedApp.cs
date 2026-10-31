@@ -30,6 +30,32 @@ public sealed class TrackedApp
 
     public string Notes { get; set; } = string.Empty;
 
+    /// <summary>深拷贝配置，供监听服务在后台线程使用，避免与 UI 编辑并发读写集合。</summary>
+    public TrackedApp Clone() => new()
+    {
+        Id = Id,
+        Name = Name,
+        ProcessName = ProcessName,
+        ExecutablePath = ExecutablePath,
+        Category = Category,
+        ColorHex = ColorHex,
+        IconBase64 = IconBase64,
+        Enabled = Enabled,
+        TrackingMode = TrackingMode,
+        IgnoreIdle = IgnoreIdle,
+        IdleThresholdMinutes = IdleThresholdMinutes,
+        RelatedProcessNames = [.. RelatedProcessNames],
+        MatchRules = MatchRules
+            .Select(rule => new MatchRule
+            {
+                Type = rule.Type,
+                Pattern = rule.Pattern,
+                Priority = rule.Priority,
+            })
+            .ToList(),
+        Notes = Notes,
+    };
+
     /// <summary>悬停提示用的配置摘要，随界面语言本地化；仅用于显示，不参与持久化。</summary>
     public string ConfigSummary
     {

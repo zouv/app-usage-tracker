@@ -86,6 +86,9 @@
                         </Grid>
                         <TextBlock Text="{DynamicResource Loc.Settings.HotkeyHint}"
                                    Style="{StaticResource Text.Muted}" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding HotkeyStatusMessage}"
+                                   Foreground="{DynamicResource Brush.Danger}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0" />
                     </StackPanel>
                 </Border>
 
@@ -102,7 +105,8 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Settings.IdleThreshold}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding IdleThresholdMinutes}" />
+                            <TextBox Grid.Column="1" Text="{Binding IdleThresholdMinutes, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.Idle}" />
                             <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Minutes}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
@@ -113,7 +117,8 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Settings.ShortSwitch}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding ShortSwitchSeconds}" />
+                            <TextBox Grid.Column="1" Text="{Binding ShortSwitchSeconds, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.ShortSwitch}" />
                             <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Seconds}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
@@ -124,7 +129,8 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Settings.AutoSave}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding AutoSaveSeconds}" />
+                            <TextBox Grid.Column="1" Text="{Binding AutoSaveSeconds, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.AutoSave}" />
                             <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Seconds}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
@@ -135,10 +141,13 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Settings.History}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding MaxHistoryDays}" />
+                            <TextBox Grid.Column="1" Text="{Binding MaxHistoryDays, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.History}" />
                             <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Days}" VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
                         </Grid>
+                        <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource Brush.Danger}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>
 
@@ -157,16 +166,16 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Settings.DailySummary}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding DailySummaryHour}" />
+                            <TextBox Grid.Column="1" Text="{Binding DailySummaryHour, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.DailySummary}" />
                             <TextBlock Grid.Column="2" Text="{DynamicResource Loc.Settings.Hour}" VerticalAlignment="Center"
                                        Margin="8,0,12,0" />
-                            <TextBox Grid.Column="3" Text="{Binding DailySummaryMinute}" />
+                            <TextBox Grid.Column="3" Text="{Binding DailySummaryMinute, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                     ToolTip="{DynamicResource Loc.Settings.Range.DailySummary}" />
                             <TextBlock Grid.Column="4" Text="{DynamicResource Loc.Settings.DailySummaryHint}"
                                        VerticalAlignment="Center" Margin="8,0,0,0"
                                        Style="{StaticResource Text.Muted}" />
                         </Grid>
-                        <CheckBox Content="{DynamicResource Loc.Settings.SaveWindowTitles}"
-                                  IsChecked="{Binding SaveWindowTitles}" />
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="220" />
@@ -176,6 +185,8 @@
                             <ComboBox Grid.Column="1" ItemsSource="{Binding ThemeOptions}"
                                       SelectedItem="{Binding Theme}" />
                         </Grid>
+                        <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource Brush.Danger}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>
 

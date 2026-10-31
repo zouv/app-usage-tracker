@@ -26,8 +26,8 @@ public static class AppIconProvider
 
         if (!string.IsNullOrWhiteSpace(app.IconBase64))
         {
-            var key = "base64:" + app.Id.ToString("N");
-            return Cache.GetOrAdd(key, _ => FromBase64(app.IconBase64));
+            // 直接以 Base64 内容为键：用户编辑图标后能立即取到新图，而不是命中旧缓存。
+            return Cache.GetOrAdd(app.IconBase64, FromBase64);
         }
 
         if (string.IsNullOrWhiteSpace(app.ExecutablePath))

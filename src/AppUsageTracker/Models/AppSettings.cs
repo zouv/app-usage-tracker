@@ -35,6 +35,4 @@ public sealed class AppSettings
 
     /// <summary>每日摘要通知的触发分钟（0-59）。</summary>
     public int DailySummaryMinute { get; set; }
-
-    public bool SaveWindowTitles { get; set; }
 }

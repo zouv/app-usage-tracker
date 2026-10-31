@@ -78,6 +78,7 @@
     <String Key="Loc.Apps.Scan">扫描运行软件</String>
     <String Key="Loc.Apps.Add">+ 添加软件</String>
     <String Key="Loc.Apps.SearchTooltip">搜索软件名称、进程或路径</String>
+    <String Key="Loc.Apps.SearchPlaceholder">搜索软件</String>
     <String Key="Loc.Apps.Col.App">软件</String>
     <String Key="Loc.Apps.Col.Category">分类</String>
     <String Key="Loc.Apps.Col.Path">匹配路径</String>
@@ -96,6 +97,7 @@
     <String Key="Loc.Apps.Field.Category">分类</String>
     <String Key="Loc.Apps.Field.Mode">统计模式</String>
     <String Key="Loc.Apps.Field.TitleMatch">窗口标题包含（可选）</String>
+    <String Key="Loc.Apps.Field.TitleMatchModeHint">仅前台和有效统计模式使用窗口标题规则；运行模式只按进程匹配。</String>
     <String Key="Loc.Apps.Field.Color">颜色（#RRGGBB）</String>
     <String Key="Loc.Apps.Field.EnableListen">启用监听</String>
     <String Key="Loc.Apps.Field.IgnoreIdle">忽略用户空闲</String>
@@ -108,6 +110,11 @@
     <String Key="Loc.Apps.Col.ProcessPath">路径</String>
     <String Key="Loc.Apps.Close">关闭</String>
     <String Key="Loc.Apps.UseSelected">使用选中项</String>
+    <String Key="Loc.Apps.Scanning">正在扫描运行中的软件…</String>
+    <String Key="Loc.Apps.NoRunningProcesses">没有找到带可见窗口的进程</String>
+    <String Key="Loc.Apps.ValidationRequired">请至少填写软件名称，并补充进程名或可执行文件路径。</String>
+    <String Key="Loc.Apps.DeleteConfirmTitle">删除软件</String>
+    <String Key="Loc.Apps.DeleteConfirm">确定删除「{0}」吗？已记录的历史会话会保留。</String>
     <String Key="Loc.Apps.Category.All">全部分类</String>
     <String Key="Loc.Apps.Category.Uncategorized">未分类</String>
     <String Key="Loc.Apps.Category.Development">开发工具</String>
@@ -150,7 +157,21 @@
     <String Key="Loc.Timeline.Field.Notes">备注</String>
     <String Key="Loc.Timeline.DeletedApp">已删除软件</String>
     <String Key="Loc.Timeline.Manual">手动</String>
+    <String Key="Loc.Timeline.Ongoing">进行中</String>
+    <String Key="Loc.Timeline.ActiveSessionLocked">进行中的会话不能编辑，等它结束后再操作。</String>
+    <String Key="Loc.Timeline.ClearDayConfirmTitle">清除当日记录</String>
+    <String Key="Loc.Timeline.ClearDayConfirm">确定删除 {0} 的全部已结束会话吗？该操作不可撤销。</String>
+    <String Key="Loc.Timeline.DeleteConfirmTitle">删除时间记录</String>
+    <String Key="Loc.Timeline.DeleteConfirm">确定删除“{0}”在 {1} 的记录吗？该操作不可撤销。</String>
+    <String Key="Loc.Timeline.MergeConfirmTitle">合并时间记录</String>
+    <String Key="Loc.Timeline.MergeConfirm">确定将当前“{0}”记录与上一条合并吗？原记录将被替换，且无法撤销。</String>
+    <String Key="Loc.Timeline.Editor.AppRequired">请选择要记录的软件。</String>
+    <String Key="Loc.Timeline.Editor.EndAfterStart">结束时间必须晚于开始时间。</String>
     <String Key="Loc.Timeline.CsvFilter">CSV 文件|*.csv</String>
+    <String Key="Loc.Timeline.Filter.AllApps">全部软件</String>
+    <String Key="Loc.Timeline.Filter.AllSources">全部来源</String>
+    <String Key="Loc.Timeline.Filter.Automatic">自动记录</String>
+    <String Key="Loc.Timeline.Filter.Manual">手动记录</String>
 
     <!-- 会话结束原因 -->
     <String Key="Loc.Session.Reason.None">—</String>
@@ -194,7 +215,6 @@
     <String Key="Loc.Settings.DailySummary">每日摘要时间</String>
     <String Key="Loc.Settings.Hour">时</String>
     <String Key="Loc.Settings.DailySummaryHint">分（每天该时刻弹出今日摘要）</String>
-    <String Key="Loc.Settings.SaveWindowTitles">保存窗口标题（可能包含敏感信息）</String>
     <String Key="Loc.Settings.Theme">主题</String>
     <String Key="Loc.Settings.Section.Data">数据管理</String>
     <String Key="Loc.Settings.OpenData">打开数据目录</String>
@@ -204,7 +224,22 @@
     <String Key="Loc.Settings.ClearHistory">清除全部历史</String>
     <String Key="Loc.Settings.AutoSaved">设置已自动保存</String>
     <String Key="Loc.Settings.BackupSaved">备份已保存：{0}</String>
-    <String Key="Loc.Settings.BackupRestored">备份已恢复，请重新启动应用</String>
+    <String Key="Loc.Settings.BackupFailed">创建备份失败：{0}</String>
+    <String Key="Loc.Settings.RestoreConfirmTitle">恢复备份</String>
+    <String Key="Loc.Settings.RestoreConfirm">恢复备份会覆盖当前数据，完成后应用将退出。是否继续？</String>
+    <String Key="Loc.Settings.BackupRestoredExit">备份已恢复。应用即将退出，请重新启动以载入备份数据。</String>
+    <String Key="Loc.Settings.RestoreFailed">恢复备份失败：{0}</String>
+    <String Key="Loc.Settings.RestoreFailedResumed">恢复备份失败，已继续监听：{0}</String>
+    <String Key="Loc.Settings.HotkeyFailed">全局快捷键「{0}」注册失败，可能已被其他程序占用，请更换组合键。</String>
+    <String Key="Loc.Settings.InvalidNumber">输入超出允许范围：{0}。非数字输入会以红框标出，修正后才会保存。</String>
+    <String Key="Loc.Settings.Range.Idle">1–120 分钟</String>
+    <String Key="Loc.Settings.Range.ShortSwitch">0–60 秒</String>
+    <String Key="Loc.Settings.Range.Heartbeat">5–300 秒</String>
+    <String Key="Loc.Settings.Range.AutoSave">5–3600 秒</String>
+    <String Key="Loc.Settings.Range.History">7–3650 天</String>
+    <String Key="Loc.Settings.Range.DailySummary">小时 0–23，分钟 0–59</String>
+    <String Key="Loc.Settings.ClearHistoryConfirmTitle">清除全部历史</String>
+    <String Key="Loc.Settings.ClearHistoryConfirm">确定清除全部原始会话和修正记录吗？该操作不可撤销，建议先创建备份。</String>
     <String Key="Loc.Settings.ValidateOk">数据完整性检查通过</String>
     <String Key="Loc.Settings.ValidateIssues">发现 {0} 个数据问题</String>
     <String Key="Loc.Settings.HistoryCleared">历史会话和修正记录已清除</String>
@@ -217,8 +252,11 @@
     <String Key="Loc.Tray.Pause">暂停监听</String>
     <String Key="Loc.Tray.Resume">继续监听</String>
     <String Key="Loc.Tray.Private">切换隐私模式</String>
+    <String Key="Loc.Tray.PrivateOn">退出隐私模式</String>
     <String Key="Loc.Tray.Add">添加当前软件</String>
     <String Key="Loc.Tray.Exit">退出</String>
+    <String Key="Loc.Tray.HintTitle">时迹仍在后台运行</String>
+    <String Key="Loc.Tray.HintMessage">窗口已隐藏到系统托盘，监听会继续。右键托盘图标可显示窗口或退出。</String>
 
     <!-- 使用提醒与每日摘要 -->
     <String Key="Loc.Notify.ReminderTitle">连续使用提醒</String>

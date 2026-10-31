@@ -4,6 +4,7 @@
     <Grid Margin="26,22,26,30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid Grid.Row="0" Margin="0,0,0,18">
@@ -28,14 +29,23 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <ComboBox Width="220" ItemsSource="{Binding AppFilterOptions}"
+                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding SelectedAppFilter}" Margin="0,0,10,0" />
+            <ComboBox Width="160" ItemsSource="{Binding SourceFilterOptions}"
+                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding SelectedSourceFilter}" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <DataGrid Grid.Row="0" ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}"
-                          IsReadOnly="True">
+                          IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Date}" Binding="{Binding Date}" Width="110" />
                         <DataGridTextColumn Header="{DynamicResource Loc.Timeline.Col.Time}" Binding="{Binding TimeRange}" Width="180" />
@@ -45,19 +55,24 @@
                     </DataGrid.Columns>
                 </DataGrid>
                 <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="12">
-                        <Button Content="{DynamicResource Loc.Timeline.Merge}" Command="{Binding MergeWithPreviousCommand}"
-                                Margin="0,0,8,0" />
-                        <Button Content="{DynamicResource Loc.Timeline.MarkIdle}" Command="{Binding MarkAsIdleCommand}"
-                                Margin="0,0,8,0" />
-                        <Button Content="{DynamicResource Loc.Apps.Edit}" Command="{Binding EditSessionCommand}" Margin="0,0,8,0" />
-                        <Button Content="{DynamicResource Loc.Apps.Delete}" Command="{Binding DeleteSessionCommand}" />
-                    </StackPanel>
+                    <Grid Margin="12">
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{DynamicResource Brush.Danger}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="{DynamicResource Loc.Timeline.Merge}" Command="{Binding MergeWithPreviousCommand}"
+                                    Margin="0,0,8,0" />
+                            <Button Content="{DynamicResource Loc.Timeline.MarkIdle}" Command="{Binding MarkAsIdleCommand}"
+                                    Margin="0,0,8,0" />
+                            <Button Content="{DynamicResource Loc.Apps.Edit}" Command="{Binding EditSessionCommand}" Margin="0,0,8,0" />
+                            <Button Content="{DynamicResource Loc.Apps.Delete}" Command="{Binding DeleteSessionCommand}" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>
 
-        <Border Grid.RowSpan="2" Background="#55000000"
+        <Border Grid.RowSpan="3" Background="#55000000"
                 Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVisibility}}">
             <Border Width="500" Style="{StaticResource Card}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -76,6 +91,19 @@
                     <TextBlock Text="{DynamicResource Loc.Timeline.Field.Notes}" />
                     <TextBox Text="{Binding EditNotes}" Height="60" AcceptsReturn="True"
                              Margin="0,5,0,12" />
+                    <TextBlock Text="{Binding EditorError}"
+                               Foreground="{DynamicResource Brush.Danger}"
+                               TextWrapping="Wrap" Margin="0,0,0,10">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding EditorError}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="{DynamicResource Loc.Apps.Cancel}" Command="{Binding CancelEditorCommand}"
                                 Margin="0,0,8,0" />

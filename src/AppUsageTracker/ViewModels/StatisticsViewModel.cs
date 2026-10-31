@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using AppUsageTracker.Models;
 using AppUsageTracker.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,15 +11,61 @@ public partial class StatisticsViewModel : ObservableObject
 {
     private readonly AppRuntime _runtime;
     private CancellationTokenSource? _refreshCancellation;
+    private int _refreshPending;
+    private long _refreshVersion;
+    private bool _isActive;
 
     public StatisticsViewModel(AppRuntime runtime)
     {
         _runtime = runtime;
-        _runtime.DataChanged += (_, _) => App.Current.Dispatcher.Invoke(Refresh);
-        LocalizationService.LanguageChanged += (_, _) => Refresh();
+        _runtime.DataChanged += (_, _) => RequestRefresh();
+        LocalizationService.LanguageChanged += (_, _) => RequestRefresh();
         AnchorDate = DateTime.Today;
+    }
+
+    /// <summary>页面是否处于当前可视内容中；离开本页后只标记待刷新，不再后台重算。</summary>
+    public bool IsActive => _isActive;
+
+    public void Activate()
+    {
+        _isActive = true;
         Refresh();
     }
+
+    public void Deactivate() => _isActive = false;
+
+    private void RequestRefresh()
+    {
+        if (!_isActive || !IsWindowVisible())
+        {
+            return;
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _refreshPending, 1) == 1)
+        {
+            return;
+        }
+
+        dispatcher.BeginInvoke(
+            () =>
+            {
+                Interlocked.Exchange(ref _refreshPending, 0);
+                if (_isActive && IsWindowVisible())
+                {
+                    Refresh();
+                }
+            });
+    }
+
+    private static bool IsWindowVisible() =>
+        Application.Current?.MainWindow is
+            { IsVisible: true, WindowState: not WindowState.Minimized };
 
     public ObservableCollection<AppUsageRow> Ranking { get; } = [];
 
@@ -33,12 +80,22 @@ public partial class StatisticsViewModel : ObservableObject
     private string? _highlightedSeriesKey;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPeriodCommand))]
+    [NotifyPropertyChangedFor(nameof(CanGoToNextPeriod))]
     private StatisticsPeriod _selectedPeriod = StatisticsPeriod.Week;
 
-    partial void OnSelectedPeriodChanged(StatisticsPeriod value) => Refresh();
+    partial void OnSelectedPeriodChanged(StatisticsPeriod value)
+    {
+        SelectedAppRow = null;
+        Refresh();
+    }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPeriodCommand))]
+    [NotifyPropertyChangedFor(nameof(CanGoToNextPeriod))]
     private DateTime _anchorDate;
+
+    public bool CanGoToNextPeriod => CanNavigateNext(AnchorDate, SelectedPeriod, DateTime.Today);
 
     [ObservableProperty]
     private string _rangeLabel = string.Empty;
@@ -59,27 +116,42 @@ public partial class StatisticsViewModel : ObservableObject
     private string _changeText = "0%";
 
     [ObservableProperty]
+    private string _changeKind = "muted";
+
+    [ObservableProperty]
+    private AppUsageRow? _selectedAppRow;
+
+    partial void OnSelectedAppRowChanged(AppUsageRow? value) => UpdateSelectedAppDetail(value);
+
+    [ObservableProperty]
     private string _selectedAppDetail = LocalizationService.T("Loc.Statistics.DetailHint");
 
     [RelayCommand]
     private void PreviousPeriod()
     {
+        SelectedAppRow = null;
         AnchorDate = Shift(AnchorDate, SelectedPeriod, -1);
         Refresh();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanGoToNextPeriod))]
     private void NextPeriod()
     {
+        if (!CanGoToNextPeriod)
+        {
+            return;
+        }
+
+        SelectedAppRow = null;
         AnchorDate = Shift(AnchorDate, SelectedPeriod, 1);
         Refresh();
     }
 
-    [RelayCommand]
-    private void SelectApp(AppUsageRow? row)
+    private void UpdateSelectedAppDetail(AppUsageRow? row)
     {
         if (row is null)
         {
+            SelectedAppDetail = LocalizationService.T("Loc.Statistics.DetailHint");
             return;
         }
 
@@ -102,17 +174,22 @@ public partial class StatisticsViewModel : ObservableObject
 
     public async void Refresh()
     {
+        if (!_isActive || !IsWindowVisible())
+        {
+            return;
+        }
+
         _refreshCancellation?.Cancel();
         _refreshCancellation?.Dispose();
         _refreshCancellation = new CancellationTokenSource();
+        var version = Interlocked.Increment(ref _refreshVersion);
         StatisticsSnapshot snapshot;
         try
         {
-            var sessions = BuildLiveSessions();
             snapshot = await _runtime.Statistics.BuildAsync(
                 SelectedPeriod,
                 AnchorDate,
-                sessions,
+                _runtime.GetLiveSessionsSnapshot(),
                 _runtime.Apps.ToList(),
                 _refreshCancellation.Token);
         }
@@ -120,12 +197,30 @@ public partial class StatisticsViewModel : ObservableObject
         {
             return;
         }
+        catch (Exception exception)
+        {
+            AppLogger.Error("统计刷新失败。", exception);
+            return;
+        }
+
+        // 快速切换周期时，旧计算可能晚于新计算返回；只允许最新一次结果落到界面。
+        if (version != Volatile.Read(ref _refreshVersion))
+        {
+            return;
+        }
+
         RangeLabel = FormatRange(snapshot.RangeStartLocal, snapshot.RangeEndLocal, SelectedPeriod);
         TotalDuration = DurationFormatter.Format(snapshot.TotalSeconds);
         AverageDuration = DurationFormatter.Format(snapshot.AverageDailySeconds);
         TopAppName = snapshot.TopApp?.Name ?? LocalizationService.T("Loc.Overview.None");
         LongestDuration = DurationFormatter.Format(snapshot.LongestSessionSeconds);
         ChangeText = $"{snapshot.PreviousPeriodChangePercentage:+0.0;-0.0;0}%";
+        ChangeKind = snapshot.PreviousPeriodChangePercentage switch
+        {
+            > 0 => "success",
+            < 0 => "danger",
+            _ => "muted",
+        };
         ChartTitle = LocalizationService.T(SelectedPeriod switch
         {
             StatisticsPeriod.Day => "Loc.Statistics.ChartDayByApp",
@@ -135,18 +230,9 @@ public partial class StatisticsViewModel : ObservableObject
         });
 
         var appMap = _runtime.Apps.ToDictionary(app => app.Id);
-        Replace(
-            Ranking,
-            snapshot.Ranking.Select(item => new AppUsageRow
-            {
-                ApplicationId = item.ApplicationId,
-                Name = item.Name,
-                Initials = OverviewViewModel.GetInitials(item.Name),
-                ColorHex = item.ColorHex,
-                Icon = AppIconProvider.Resolve(appMap.GetValueOrDefault(item.ApplicationId)),
-                Seconds = item.Seconds,
-                Percentage = item.Percentage,
-            }));
+        var selectedAppId = SelectedAppRow?.ApplicationId;
+        AppUsageRowSync.Apply(Ranking, snapshot.Ranking, appMap);
+        ReconcileSelection(selectedAppId);
 
         DailyChart = SelectedPeriod switch
         {
@@ -162,6 +248,37 @@ public partial class StatisticsViewModel : ObservableObject
                 snapshot.RangeEndLocal),
         };
     }
+
+    /// <summary>排行榜实例更新后按稳定软件 Id 恢复选择，并刷新详情文案。</summary>
+    internal void ReconcileSelection(Guid? selectedAppId)
+    {
+        SelectedAppRow = selectedAppId is { } id
+            ? Ranking.FirstOrDefault(row => row.ApplicationId == id)
+            : null;
+        UpdateSelectedAppDetail(SelectedAppRow);
+    }
+
+    internal static bool CanNavigateNext(
+        DateTime anchor,
+        StatisticsPeriod period,
+        DateTime today)
+    {
+        if (period == StatisticsPeriod.All)
+        {
+            return false;
+        }
+
+        return Shift(PeriodStart(anchor, period), period, 1) <= PeriodStart(today, period);
+    }
+
+    private static DateTime PeriodStart(DateTime value, StatisticsPeriod period) => period switch
+    {
+        StatisticsPeriod.Day => value.Date,
+        StatisticsPeriod.Week => value.Date.AddDays(-(((int)value.DayOfWeek + 6) % 7)),
+        StatisticsPeriod.Month => new DateTime(value.Year, value.Month, 1),
+        StatisticsPeriod.Year => new DateTime(value.Year, 1, 1),
+        _ => value.Date,
+    };
 
     private static DateTime Shift(DateTime value, StatisticsPeriod period, int direction) =>
         period switch
@@ -189,33 +306,4 @@ public partial class StatisticsViewModel : ObservableObject
                 : $"{start:M月d日} - {end.AddDays(-1):M月d日}",
         };
 
-    private List<ActivitySession> BuildLiveSessions()
-    {
-        var sessions = _runtime.Sessions.Select(item => item.Clone()).ToList();
-        var now = _runtime.TimeProvider.UtcNow;
-        foreach (var info in _runtime.Snapshot.ActiveApps)
-        {
-            var existing = sessions.FirstOrDefault(item => item.Id == info.Session.Id);
-            if (existing is not null)
-            {
-                existing.EndedAtUtc = now;
-                existing.DurationSeconds = Math.Max(
-                    info.Session.DurationSeconds,
-                    (long)(now - info.Session.StartedAtUtc).TotalSeconds);
-            }
-        }
-
-        return sessions;
-    }
-
-    private static void Replace<T>(
-        ObservableCollection<T> collection,
-        IEnumerable<T> items)
-    {
-        collection.Clear();
-        foreach (var item in items)
-        {
-            collection.Add(item);
-        }
-    }
 }

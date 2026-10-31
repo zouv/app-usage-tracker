@@ -46,5 +46,18 @@ public static class AppLogger
 
         var archive = Path.Combine(LogDirectory, $"app-{DateTime.Now:yyyyMMdd-HHmmss}.log");
         File.Move(LogFile, archive, true);
+        PruneArchives(LogDirectory);
+    }
+
+    /// <summary>只保留最近的若干轮转日志，避免常驻运行多年后无限积累。</summary>
+    internal static void PruneArchives(string directory, int keep = 10)
+    {
+        foreach (var file in new DirectoryInfo(directory)
+                     .EnumerateFiles("app-*.log")
+                     .OrderByDescending(file => file.LastWriteTimeUtc)
+                     .Skip(Math.Max(0, keep)))
+        {
+            file.Delete();
+        }
     }
 }

@@ -30,13 +30,17 @@ public static class ChartBuilder
         DateTime day)
     {
         var appMap = apps.ToDictionary(app => app.Id);
-        // 与统计口径保持一致：只画有效前台会话，锁屏和空闲段不占时间线。
+        var dayStart = day.Date;
+        var dayEnd = dayStart.AddDays(1);
+        // 与统计口径保持一致：只画有效前台会话，锁屏和空闲段不占时间线；
+        // 跨零点会话按当天重叠部分裁剪，避免凌晨活动要等会话结束才出现。
         var todaySessions = sessions
             .Where(item =>
                 item.EndedAtUtc is not null &&
                 item.DurationSeconds > 0 &&
                 item.State == ActivityState.Active &&
-                item.StartedAtUtc.ToLocalTime().Date == day.Date)
+                item.StartedAtUtc.ToLocalTime() < dayEnd &&
+                item.EndedAtUtc.Value.ToLocalTime() > dayStart)
             .OrderBy(item => item.StartedAtUtc)
             .ToList();
 
@@ -45,9 +49,11 @@ public static class ChartBuilder
             return ChartData.Empty;
         }
 
-        var earliest = todaySessions.Min(item => item.StartedAtUtc.ToLocalTime());
-        var latest = todaySessions.Max(item => item.EndedAtUtc!.Value.ToLocalTime());
-        var (windowStart, windowEnd) = TimelineLayout.ComputeWindow(earliest, latest, day.Date);
+        var earliest = todaySessions.Min(item =>
+            Max(item.StartedAtUtc.ToLocalTime(), dayStart));
+        var latest = todaySessions.Max(item =>
+            Min(item.EndedAtUtc!.Value.ToLocalTime(), dayEnd));
+        var (windowStart, windowEnd) = TimelineLayout.ComputeWindow(earliest, latest, dayStart);
 
         var binSpan = TimeSpan.FromMinutes(TimelineBinMinutes);
         var binCount = (int)Math.Ceiling((windowEnd - windowStart) / binSpan);
@@ -75,8 +81,10 @@ public static class ChartBuilder
 
         foreach (var session in todaySessions)
         {
-            var start = session.StartedAtUtc.ToLocalTime();
-            var end = session.EndedAtUtc!.Value.ToLocalTime();
+            var sessionStart = session.StartedAtUtc.ToLocalTime();
+            var sessionEnd = session.EndedAtUtc!.Value.ToLocalTime();
+            var start = Max(sessionStart, dayStart);
+            var end = Min(sessionEnd, dayEnd);
             if (end <= windowStart || start >= windowEnd)
             {
                 continue;
@@ -88,7 +96,7 @@ public static class ChartBuilder
             colors[key] = app?.ColorHex ?? AppColorPalette.NeutralHex;
 
             // 会话的有效时长可能小于墙上时间，按重叠比例等比摊分到各分箱。
-            var wallSeconds = Math.Max(1d, (end - start).TotalSeconds);
+            var wallSeconds = Math.Max(1d, (sessionEnd - sessionStart).TotalSeconds);
             var firstBin = Math.Max(0, (int)((start - windowStart) / binSpan));
             var lastBin = Math.Min(binCount - 1, (int)((end - windowStart) / binSpan));
 
@@ -346,6 +354,10 @@ public static class ChartBuilder
                 TotalSeconds = pair.Value,
             })
             .ToList();
+
+    private static DateTime Max(DateTime left, DateTime right) => left > right ? left : right;
+
+    private static DateTime Min(DateTime left, DateTime right) => left < right ? left : right;
 
     private static Color ParseColor(string? colorHex)
     {

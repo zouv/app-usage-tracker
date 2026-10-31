@@ -7,39 +7,58 @@ public sealed class UsageNotificationService : IDisposable
     private readonly AppRuntime _runtime;
     private readonly TrayIconService _tray;
     private readonly Timer _timer = new(TimeSpan.FromMinutes(1));
-    private readonly Dictionary<Guid, int> _lastNotifiedHourByApp = [];
+    private readonly Dictionary<Guid, int> _lastNotifiedHourBySession = [];
     private DateOnly? _lastSummaryDate;
+    private bool _disposed;
 
     public UsageNotificationService(AppRuntime runtime, TrayIconService tray)
     {
         _runtime = runtime;
         _tray = tray;
         _timer.AutoReset = true;
-        _timer.Elapsed += (_, _) => Check();
+        _timer.Elapsed += (_, _) => CheckSafely();
         _timer.Start();
     }
 
-    public void Dispose() => _timer.Dispose();
+    public void Dispose()
+    {
+        _disposed = true;
+        _timer.Stop();
+        _timer.Dispose();
+    }
+
+    private void CheckSafely()
+    {
+        try
+        {
+            Check();
+        }
+        catch (Exception exception)
+        {
+            // 通知失败不能影响监听与持久化。
+            AppLogger.Error("使用提醒检查失败。", exception);
+        }
+    }
 
     private void Check()
     {
-        if (!_runtime.Settings.NotificationsEnabled)
+        if (_disposed || !_runtime.Settings.NotificationsEnabled)
         {
             return;
         }
 
         var snapshot = _runtime.Snapshot;
-        // 每个活跃软件各自按整小时提醒一次连续使用。
+        var activeSessionIds = new HashSet<Guid>();
+        // 每个活跃软件各自按整小时提醒一次连续使用；以会话 Id 为键，软件重新开始使用后重新计时。
         foreach (var info in snapshot.ActiveApps)
         {
-            var seconds = Math.Max(
-                info.Session.DurationSeconds,
-                (long)(_runtime.TimeProvider.UtcNow - info.Session.StartedAtUtc).TotalSeconds);
+            activeSessionIds.Add(info.Session.Id);
+            var seconds = info.EstimateDurationSeconds(_runtime.TimeProvider.UtcNow);
             var hour = (int)(seconds / 3600);
-            var lastHour = _lastNotifiedHourByApp.GetValueOrDefault(info.App.Id);
+            var lastHour = _lastNotifiedHourBySession.GetValueOrDefault(info.Session.Id);
             if (hour > 0 && hour > lastHour)
             {
-                _lastNotifiedHourByApp[info.App.Id] = hour;
+                _lastNotifiedHourBySession[info.Session.Id] = hour;
                 _tray.ShowNotification(
                     LocalizationService.T("Loc.Notify.ReminderTitle"),
                     LocalizationService.T(
@@ -47,6 +66,13 @@ public sealed class UsageNotificationService : IDisposable
                         info.App.Name,
                         hour));
             }
+        }
+
+        foreach (var sessionId in _lastNotifiedHourBySession.Keys
+                     .Where(id => !activeSessionIds.Contains(id))
+                     .ToList())
+        {
+            _lastNotifiedHourBySession.Remove(sessionId);
         }
 
         var localNow = DateTime.Now;
@@ -57,11 +83,12 @@ public sealed class UsageNotificationService : IDisposable
             _runtime.Settings.DailySummaryHour,
             _runtime.Settings.DailySummaryMinute))
         {
+            // 与概览/统计使用同一份实时会话快照，避免漏掉当前仍在进行的会话。
             var summary = _runtime.Statistics.Build(
                 Models.StatisticsPeriod.Day,
                 localNow,
-                _runtime.Sessions,
-                _runtime.Apps);
+                _runtime.GetLiveSessionsSnapshot(),
+                _runtime.AppsSnapshot);
             if (summary.TotalSeconds > 0)
             {
                 _lastSummaryDate = today;

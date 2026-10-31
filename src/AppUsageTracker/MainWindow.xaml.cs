@@ -12,6 +12,16 @@ public partial class MainWindow : Window
         InitializeComponent();
         SourceInitialized += OnSourceInitialized;
         StateChanged += OnStateChanged;
+        IsVisibleChanged += OnIsVisibleChanged;
+    }
+
+    /// <summary>窗口从托盘/最小化恢复时，通知页面补一次暂停期间的数据刷新。</summary>
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs eventArgs)
+    {
+        if (IsVisible)
+        {
+            App.Current.RuntimeOrNull?.NotifyDataChanged();
+        }
     }
 
     /// <summary>
@@ -51,6 +61,11 @@ public partial class MainWindow : Window
         {
             MaximizeIcon.Data = geometry;
         }
+
+        if (WindowState != WindowState.Minimized)
+        {
+            App.Current.RuntimeOrNull?.NotifyDataChanged();
+        }
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs eventArgs) =>
@@ -65,11 +80,20 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs eventArgs)
     {
-        if (!App.Current.IsExiting && App.Current.Runtime.Settings.MinimizeToTrayOnClose)
+        if (!App.Current.IsExiting)
         {
+            var minimizeToTray = App.Current.RuntimeOrNull?.Settings.MinimizeToTrayOnClose ?? true;
+            if (minimizeToTray)
+            {
+                eventArgs.Cancel = true;
+                App.Current.HideMainWindowToTray();
+                return;
+            }
+
+            // 关闭托盘驻留时也必须走完整退出流程，否则运行时与未落盘会话不会收尾。
+            // 先结束本次 OnClosing，再由调度器发起退出，避免在关闭回调里重入 Close()。
             eventArgs.Cancel = true;
-            Hide();
-            Services.MemoryUsageOptimizer.TrimWorkingSet();
+            Dispatcher.BeginInvoke(App.Current.ExitApplication);
             return;
         }
 

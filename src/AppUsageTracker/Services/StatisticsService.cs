@@ -45,7 +45,7 @@ public sealed class StatisticsService : IStatisticsService
                 var app = appMap.GetValueOrDefault(group.Key);
                 return new AppUsageSummary(
                     group.Key,
-                    app?.Name ?? "已删除软件",
+                    app?.Name ?? LocalizationService.T("Loc.Timeline.DeletedApp"),
                     app?.ColorHex ?? "#7A8491",
                     seconds,
                     total == 0 ? 0 : seconds * 100d / total);
@@ -68,7 +68,7 @@ public sealed class StatisticsService : IStatisticsService
                         var app = appMap.GetValueOrDefault(appGroup.Key);
                         return new AppUsageSummary(
                             appGroup.Key,
-                            app?.Name ?? "已删除软件",
+                            app?.Name ?? LocalizationService.T("Loc.Timeline.DeletedApp"),
                             app?.ColorHex ?? "#7A8491",
                             seconds,
                             dayTotal == 0 ? 0 : seconds * 100d / dayTotal);

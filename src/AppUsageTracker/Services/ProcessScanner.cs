@@ -7,16 +7,30 @@ namespace AppUsageTracker.Services;
 
 public sealed class ProcessScanner : IProcessScanner
 {
-    public IReadOnlyList<RunningProcessInfo> EnumerateRunningProcesses() =>
-        EnumerateProcesses(visibleOnly: false, withIcon: false);
+    public IReadOnlyList<RunningProcessInfo> EnumerateRunningProcesses(
+        IReadOnlyCollection<string>? processNames = null) =>
+        EnumerateProcesses(visibleOnly: false, withIcon: false, processNames);
 
     public IReadOnlyList<RunningProcessInfo> EnumerateVisibleProcesses() =>
-        EnumerateProcesses(visibleOnly: true, withIcon: true);
+        EnumerateProcesses(visibleOnly: true, withIcon: true, processNames: null);
 
     private static IReadOnlyList<RunningProcessInfo> EnumerateProcesses(
         bool visibleOnly,
-        bool withIcon)
+        bool withIcon,
+        IReadOnlyCollection<string>? processNames)
     {
+        var nameFilter = processNames is null
+            ? null
+            : new HashSet<string>(
+                processNames
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(NormalizeProcessName),
+                StringComparer.OrdinalIgnoreCase);
+        if (nameFilter is { Count: 0 })
+        {
+            return [];
+        }
+
         var result = new Dictionary<string, RunningProcessInfo>(StringComparer.OrdinalIgnoreCase);
         Process[] processes;
         try
@@ -34,6 +48,12 @@ public sealed class ProcessScanner : IProcessScanner
             {
                 try
                 {
+                    if (nameFilter is not null &&
+                        !nameFilter.Contains(NormalizeProcessName(process.ProcessName)))
+                    {
+                        continue;
+                    }
+
                     if (visibleOnly && process.MainWindowHandle == nint.Zero)
                     {
                         continue;
@@ -49,7 +69,8 @@ public sealed class ProcessScanner : IProcessScanner
                             process.Id,
                             EnsureExe(process.ProcessName),
                             path,
-                            process.MainWindowTitle ?? string.Empty,
+                            // 运行模式匹配不读取窗口标题，避免每次扫描为所有进程访问主窗口。
+                            visibleOnly ? process.MainWindowTitle ?? string.Empty : string.Empty,
                             withIcon ? ReadIcon(path) : string.Empty));
                 }
                 catch
@@ -122,6 +143,9 @@ public sealed class ProcessScanner : IProcessScanner
         processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
             ? processName
             : processName + ".exe";
+
+    private static string NormalizeProcessName(string name) =>
+        Path.GetFileNameWithoutExtension(name.Trim());
 
     private static string ReadIcon(string path)
     {

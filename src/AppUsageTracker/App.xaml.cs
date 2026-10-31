@@ -1,6 +1,7 @@
 using System.Windows;
 using System.IO;
 using System.Threading;
+using System.Windows.Threading;
 using AppUsageTracker.Services;
 using AppUsageTracker.ViewModels;
 
@@ -21,6 +22,9 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private bool _isExiting;
     private bool _hotkeyCaptureActive;
+    private bool _trayHintShown;
+
+    public event Action<bool, string>? HotkeyRegistrationChanged;
 
     public new static App Current => (App)Application.Current;
 
@@ -29,9 +33,13 @@ public partial class App : Application
     public AppRuntime Runtime =>
         _runtime ?? throw new InvalidOperationException("应用尚未完成初始化。");
 
+    public AppRuntime? RuntimeOrNull => _runtime;
+
     protected override async void OnStartup(StartupEventArgs eventArgs)
     {
         base.OnStartup(eventArgs);
+        RegisterCrashLogging();
+        SessionEnding += OnSessionEnding;
 
         // 单实例：已有一个实例运行时，唤醒它并退出本实例，避免双实例争抢数据文件。
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
@@ -63,6 +71,7 @@ public partial class App : Application
             await _runtime.InitializeAsync();
             ThemeService.Apply(_runtime.Settings.Theme);
             LocalizationService.Apply(_runtime.Settings.Language);
+            ApplyAutoStart(_runtime.Settings.AutoStart);
 
             var overview = new OverviewViewModel(_runtime);
             var apps = new AppsViewModel(_runtime);
@@ -177,6 +186,29 @@ public partial class App : Application
         _mainWindow.Show();
         _mainWindow.WindowState = WindowState.Normal;
         _mainWindow.Activate();
+        // 窗口隐藏期间页面暂停了重算，重新显示后立即补一次数据。
+        _runtime?.NotifyDataChanged();
+    }
+
+    /// <summary>隐藏到托盘；每次运行首次隐藏时说明应用仍在后台监听。</summary>
+    public void HideMainWindowToTray()
+    {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        _mainWindow.Hide();
+        MemoryUsageOptimizer.ScheduleTrim();
+        if (_trayHintShown || _trayIcon is null)
+        {
+            return;
+        }
+
+        _trayHintShown = true;
+        _trayIcon.ShowNotification(
+            LocalizationService.T("Loc.Tray.HintTitle"),
+            LocalizationService.T("Loc.Tray.HintMessage"));
     }
 
     /// <summary>切换主窗口的前台/后台：可见则隐藏到托盘，不可见则呼出并激活。</summary>
@@ -189,8 +221,7 @@ public partial class App : Application
 
         if (_mainWindow.IsVisible)
         {
-            _mainWindow.Hide();
-            MemoryUsageOptimizer.TrimWorkingSet();
+            HideMainWindowToTray();
         }
         else
         {
@@ -198,27 +229,80 @@ public partial class App : Application
         }
     }
 
-    /// <summary>按当前设置重新注册全局快捷键，设置变更后调用。失败只降级，不阻断启动。</summary>
-    public void ApplyHotkey()
+    /// <summary>把运行中的未处理异常写入日志，便于常驻后台时定位闪退。</summary>
+    private void RegisterCrashLogging()
+    {
+        DispatcherUnhandledException += (_, eventArgs) =>
+            AppLogger.Error("界面线程未处理异常。", eventArgs.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+        {
+            if (eventArgs.ExceptionObject is Exception exception)
+            {
+                AppLogger.Error("未处理的后台异常。", exception);
+            }
+        };
+        TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
+        {
+            AppLogger.Error("未观察的任务异常。", eventArgs.Exception);
+            eventArgs.SetObserved();
+        };
+    }
+
+    /// <summary>
+    /// 修正已存在的开机启动项路径（便携版移动目录后仍能启动）；
+    /// 首次运行且设置里为默认开启时不主动写入注册表，避免未确认就注册自启动。
+    /// </summary>
+    private static void ApplyAutoStart(bool enabled)
+    {
+        try
+        {
+            var startup = new StartupService();
+            if (enabled || startup.IsEnabled())
+            {
+                startup.SetEnabled(enabled);
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Debug($"更新开机启动设置失败：{exception.Message}");
+        }
+    }
+
+    /// <summary>按当前设置重新注册全局快捷键。空快捷键表示主动停用，不视为失败。</summary>
+    public bool ApplyHotkey()
     {
         // 捕捉新快捷键期间不注册，避免按下当前组合键时误触发呼出/隐藏。
         if (_hotkeyCaptureActive || _runtime is null || _hotkeyService is null)
         {
-            return;
+            return true;
         }
 
+        var hotkeyText = _runtime.Settings.Hotkey;
+        var succeeded = false;
         try
         {
-            var hotkey = Models.HotkeyDefinition.Parse(_runtime.Settings.Hotkey);
-            if (!_hotkeyService.Register(hotkey))
+            if (string.IsNullOrWhiteSpace(hotkeyText))
             {
-                AppLogger.Debug($"全局快捷键注册失败：{_runtime.Settings.Hotkey}");
+                _hotkeyService.Unregister();
+                succeeded = true;
+            }
+            else
+            {
+                var hotkey = Models.HotkeyDefinition.Parse(hotkeyText);
+                succeeded = _hotkeyService.Register(hotkey);
+                if (!succeeded)
+                {
+                    AppLogger.Debug($"全局快捷键注册失败：{hotkeyText}");
+                }
             }
         }
         catch (Exception exception)
         {
             AppLogger.Debug($"全局快捷键注册异常：{exception.Message}");
         }
+
+        HotkeyRegistrationChanged?.Invoke(succeeded, hotkeyText);
+        return succeeded;
     }
 
     /// <summary>开始捕捉新快捷键：临时注销全局快捷键，聚焦结束后用 <see cref="EndHotkeyCapture"/> 恢复。</summary>
@@ -235,6 +319,29 @@ public partial class App : Application
         ApplyHotkey();
     }
 
+    /// <summary>Windows 注销/关机前同步等待一次完整收尾，避免只发起异步退出就被系统终止。</summary>
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs eventArgs)
+    {
+        if (_isExiting || _runtime is null)
+        {
+            return;
+        }
+
+        _isExiting = true;
+        try
+        {
+            _hotkeyService?.Dispose();
+            if (!_runtime.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5)))
+            {
+                AppLogger.Debug("关机前的数据保存超过 5 秒，系统将按默认流程继续结束会话。");
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("关机或注销前保存数据失败。", exception);
+        }
+    }
+
     public async void ExitApplication()
     {
         if (_isExiting)
@@ -243,33 +350,87 @@ public partial class App : Application
         }
 
         _isExiting = true;
+        SignalShutdown();
+        try
+        {
+            _hotkeyService?.Dispose();
+            _mainWindow?.Close();
+            _notifications?.Dispose();
+            _trayIcon?.Dispose();
+            if (_runtime is not null)
+            {
+                await _runtime.DisposeAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            // 保存失败也必须退出，避免应用卡在无窗口状态。
+            AppLogger.Error("退出应用时发生异常。", exception);
+        }
+        finally
+        {
+            ReleaseSingleInstance();
+            Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// 导入备份后立即退出，不再写回旧的内存数据。调用方应确保导入已经完成，
+    /// 下次启动时由正常加载流程读取导入后的文件。
+    /// </summary>
+    public void ExitWithoutSaving()
+    {
+        if (_isExiting)
+        {
+            return;
+        }
+
+        _isExiting = true;
+        SignalShutdown();
+        try
+        {
+            _hotkeyService?.Dispose();
+            _mainWindow?.Close();
+            _notifications?.Dispose();
+            _trayIcon?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("退出应用时发生异常。", exception);
+        }
+        finally
+        {
+            ReleaseSingleInstance();
+            Shutdown();
+        }
+    }
+
+    /// <summary>通知单实例唤醒线程退出，但不提前释放互斥体，避免保存收尾期间第二个实例启动。</summary>
+    private void SignalShutdown()
+    {
         _showInstanceSignal?.Set();
         _showInstanceSignal?.Dispose();
         _showInstanceSignal = null;
-        if (_singleInstanceMutex is not null)
+    }
+
+    private void ReleaseSingleInstance()
+    {
+        if (_singleInstanceMutex is null)
         {
-            try
-            {
-                _singleInstanceMutex.ReleaseMutex();
-            }
-            catch (ApplicationException)
-            {
-                // 互斥体未被本线程持有，忽略。
-            }
-            _singleInstanceMutex.Dispose();
-            _singleInstanceMutex = null;
+            return;
         }
 
-        _hotkeyService?.Dispose();
-        _mainWindow?.Close();
-        _notifications?.Dispose();
-        _trayIcon?.Dispose();
-        if (_runtime is not null)
+        try
         {
-            await _runtime.DisposeAsync();
+            _singleInstanceMutex.ReleaseMutex();
+        }
+        catch (ApplicationException)
+        {
+            // 互斥体未被本线程持有，忽略。
         }
 
-        Shutdown();
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = null;
     }
 
     private async Task AddCurrentAppAsync()
@@ -290,6 +451,5 @@ public partial class App : Application
             ExecutablePath = window.ExecutablePath,
         });
         await _runtime.SaveAppsAsync();
-        await _runtime.ActivityService.HandleForegroundWindowAsync(window);
     }
 }

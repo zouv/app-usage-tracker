@@ -1,6 +1,8 @@
 @echo off
 chcp 65001 >nul
 setlocal
+rem Child BAT entries must not wait for a key press in automation.
+set "APP_USAGE_TRACKER_NO_PAUSE=1"
 
 rem ============================================================
 rem  app-usage-tracker - 一键 CI 流水线

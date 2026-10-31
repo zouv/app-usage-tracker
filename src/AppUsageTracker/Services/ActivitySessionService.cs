@@ -10,8 +10,12 @@ public sealed class ActivitySessionService : IActivitySessionService
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private AppSettings _settings = new();
-    private List<TrackedApp> _apps = [];
+    private IReadOnlyList<TrackedApp> _apps = [];
+
+    /// <summary>所有原始会话。只在 _sessionsLock 内读写，对外只暴露深拷贝快照。</summary>
+    private readonly object _sessionsLock = new();
     private readonly List<ActivitySession> _sessions = [];
+    private DateOnly _lastPruneDate;
 
     /// <summary>正在累计的软件会话，按软件 Id 键控；一个软件同一时刻只存在一条。</summary>
     private readonly Dictionary<Guid, ActivitySession> _appSessions = [];
@@ -49,9 +53,60 @@ public sealed class ActivitySessionService : IActivitySessionService
     public TrackingSnapshot Snapshot { get; private set; } =
         new(ActivityState.Stopped, null, null, null, false, false, []);
 
-    public IReadOnlyList<ActivitySession> Sessions => _sessions;
+    /// <summary>深拷贝快照，供 UI 与统计在后台线程安全读取。</summary>
+    public IReadOnlyList<ActivitySession> Sessions
+    {
+        get
+        {
+            lock (_sessionsLock)
+            {
+                return _sessions.Select(session => session.Clone()).ToList();
+            }
+        }
+    }
 
     internal List<ActivitySession> SessionList => _sessions;
+
+    /// <summary>只有启用了「运行」模式且未被全局阻断时才需要扫描进程。</summary>
+    public bool ShouldScanRunningProcesses =>
+        _started &&
+        BlockingState() is null &&
+        _apps.Any(app => app.Enabled && app.TrackingMode == TrackingMode.Running);
+
+    public IReadOnlyList<TrackedApp> AppsSnapshot => _apps;
+
+    /// <summary>由运行模式软件的进程名、关联进程名、路径和进程规则推导出的候选进程名。</summary>
+    public IReadOnlyCollection<string> RunningProcessScanNames
+    {
+        get
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var app in _apps)
+            {
+                if (!app.Enabled || app.TrackingMode != TrackingMode.Running)
+                {
+                    continue;
+                }
+
+                AddProcessName(names, app.ProcessName);
+                AddProcessName(names, app.ExecutablePath);
+                foreach (var related in app.RelatedProcessNames)
+                {
+                    AddProcessName(names, related);
+                }
+
+                foreach (var rule in app.MatchRules)
+                {
+                    if (rule.Type is MatchRuleType.ProcessName or MatchRuleType.ExecutablePath)
+                    {
+                        AddProcessName(names, rule.Pattern);
+                    }
+                }
+            }
+
+            return names;
+        }
+    }
 
     public async Task StartAsync(
         AppDataState state,
@@ -61,10 +116,15 @@ public sealed class ActivitySessionService : IActivitySessionService
         try
         {
             _settings = state.Settings;
-            _apps = state.Apps;
-            _sessions.Clear();
-            _sessions.AddRange(state.Sessions);
+            _apps = state.Apps.Select(app => app.Clone()).ToList();
+            lock (_sessionsLock)
+            {
+                _sessions.Clear();
+                _sessions.AddRange(state.Sessions);
+            }
+
             RecoverOpenSessions();
+            PruneExpiredSessions();
             _started = true;
             _lastSaveAtUtc = _timeProvider.UtcNow;
             await EvaluateStateAsync(SessionEndReason.Recovered, cancellationToken);
@@ -75,7 +135,33 @@ public sealed class ActivitySessionService : IActivitySessionService
         }
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken = default)
+    public Task StopAsync(CancellationToken cancellationToken = default) =>
+        StopCoreAsync(save: true, cancellationToken);
+
+    public Task StopWithoutSavingAsync(CancellationToken cancellationToken = default) =>
+        StopCoreAsync(save: false, cancellationToken);
+
+    public async Task ResumeAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_started)
+            {
+                return;
+            }
+
+            _started = true;
+            _lastSaveAtUtc = _timeProvider.UtcNow;
+            await EvaluateStateAsync(SessionEndReason.Recovered, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task StopCoreAsync(bool save, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
         try
@@ -88,7 +174,10 @@ public sealed class ActivitySessionService : IActivitySessionService
             CompleteAllSessions(SessionEndReason.ApplicationExit);
             _started = false;
             Publish();
-            await SaveIfNeededAsync(true, cancellationToken);
+            if (save)
+            {
+                await SaveIfNeededAsync(true, cancellationToken);
+            }
         }
         finally
         {
@@ -104,6 +193,11 @@ public sealed class ActivitySessionService : IActivitySessionService
         try
         {
             var matched = window is null ? null : _matcher.Match(window, _apps);
+            if (Equals(_currentWindow, window) && _currentApp?.Id == matched?.Id)
+            {
+                return;
+            }
+
             _currentWindow = window;
             _currentApp = matched;
             await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
@@ -121,7 +215,86 @@ public sealed class ActivitySessionService : IActivitySessionService
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            _runningApps = _matcher.MatchRunningProcess(processes, _apps);
+            var matched = _matcher.MatchRunningProcess(processes, _apps);
+            if (_runningApps.Select(app => app.Id).SequenceEqual(matched.Select(app => app.Id)))
+            {
+                return;
+            }
+
+            _runningApps = matched;
+            await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task UpdateAppsAsync(
+        IReadOnlyList<TrackedApp> apps,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            _apps = apps.Select(app => app.Clone()).ToList();
+            RefreshCurrentMatch();
+            await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<T> EditSessionsAsync<T>(
+        Func<List<ActivitySession>, T> edit,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            T result;
+            lock (_sessionsLock)
+            {
+                result = edit(_sessions);
+            }
+
+            _dirty = true;
+            return result;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ClearSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            CompleteAllSessions(SessionEndReason.Manual);
+            lock (_sessionsLock)
+            {
+                _sessions.Clear();
+            }
+
+            _dirty = true;
+            Publish();
+            await SaveIfNeededAsync(true, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ReevaluateAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
             await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
         }
         finally
@@ -221,6 +394,17 @@ public sealed class ActivitySessionService : IActivitySessionService
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            PruneExpiredSessions();
+
+            // 软件配置可能在运行中被编辑：心跳时重新匹配当前窗口，
+            // 确保停用/删除/修改匹配规则后能及时结束旧会话。
+            var previousAppId = _currentApp?.Id;
+            RefreshCurrentMatch();
+            if (previousAppId != _currentApp?.Id)
+            {
+                await EvaluateStateAsync(SessionEndReason.None, cancellationToken);
+            }
+
             var now = _timeProvider.UtcNow;
             foreach (var (appId, session) in _appSessions)
             {
@@ -306,7 +490,10 @@ public sealed class ActivitySessionService : IActivitySessionService
         }
 
         Publish();
-        await SaveIfNeededAsync(_appSessions.Count == 0, cancellationToken);
+        await SaveIfNeededAsync(
+            _appSessions.Count == 0,
+            cancellationToken,
+            allowForceThrottle: true);
     }
 
     /// <summary>当前应累计的软件集合：前台命中优先，叠加与前台不同 Id 的运行模式软件；同一软件只出现一次。</summary>
@@ -314,18 +501,29 @@ public sealed class ActivitySessionService : IActivitySessionService
     {
         var result = new List<TrackedApp>();
         var seen = new HashSet<Guid>();
-        if (_currentApp is not null && !IsExcludedByIdle(_currentApp))
+
+        // 配置可能刚被编辑或删除：只使用当前配置列表里仍启用、仍存在的软件对象。
+        var foreground = _currentApp is null
+            ? null
+            : _apps.FirstOrDefault(app => app.Id == _currentApp.Id);
+        if (foreground is { Enabled: true } && !IsExcludedByIdle(foreground))
         {
-            result.Add(_currentApp);
-            seen.Add(_currentApp.Id);
+            result.Add(foreground);
+            seen.Add(foreground.Id);
         }
 
-        foreach (var app in _runningApps)
+        foreach (var running in _runningApps)
         {
-            if (seen.Add(app.Id) && !IsExcludedByIdle(app))
+            var app = _apps.FirstOrDefault(item => item.Id == running.Id);
+            if (app is not { Enabled: true } ||
+                app.TrackingMode != TrackingMode.Running ||
+                !seen.Add(app.Id) ||
+                IsExcludedByIdle(app))
             {
-                result.Add(app);
+                continue;
             }
+
+            result.Add(app);
         }
 
         return result;
@@ -370,53 +568,60 @@ public sealed class ActivitySessionService : IActivitySessionService
 
     private void StartAppSession(TrackedApp app)
     {
-        var now = _timeProvider.UtcNow;
-        var timestamp = _timeProvider.GetTimestamp();
-        var mergeThreshold = TimeSpan.FromSeconds(Math.Max(0, _settings.ShortSwitchSeconds));
-        var previous = _sessions
-            .Where(item =>
-                item.ApplicationId == app.Id &&
-                item.EndedAtUtc is not null &&
-                item.EndReason == SessionEndReason.WindowChanged)
-            .OrderByDescending(item => item.EndedAtUtc)
-            .FirstOrDefault();
-        if (previous?.EndedAtUtc is { } previousEnd &&
-            now - previousEnd <= mergeThreshold)
+        lock (_sessionsLock)
         {
-            var transient = _sessions
+            var now = _timeProvider.UtcNow;
+            var timestamp = _timeProvider.GetTimestamp();
+            var mergeThreshold = TimeSpan.FromSeconds(Math.Max(0, _settings.ShortSwitchSeconds));
+            var previous = _sessions
                 .Where(item =>
-                    item.Id != previous.Id &&
-                    item.StartedAtUtc >= previousEnd &&
-                    item.EndedAtUtc is not null)
-                .ToList();
-            if (transient.Sum(item => item.DurationSeconds) <= _settings.ShortSwitchSeconds)
+                    item.ApplicationId == app.Id &&
+                    item.EndedAtUtc is not null &&
+                    item.EndReason == SessionEndReason.WindowChanged)
+                .OrderByDescending(item => item.EndedAtUtc)
+                .FirstOrDefault();
+            if (previous?.EndedAtUtc is { } previousEnd &&
+                now - previousEnd <= mergeThreshold)
             {
-                foreach (var item in transient)
+                // 只清理短切换产生的已结束软件会话；空闲/锁屏等全局状态会话与手工记录不能被吞掉。
+                var transient = _sessions
+                    .Where(item =>
+                        item.Id != previous.Id &&
+                        item.ApplicationId is not null &&
+                        item.State == ActivityState.Active &&
+                        !item.IsManual &&
+                        item.StartedAtUtc >= previousEnd &&
+                        item.EndedAtUtc is not null)
+                    .ToList();
+                if (transient.Sum(item => item.DurationSeconds) <= _settings.ShortSwitchSeconds)
                 {
-                    _sessions.Remove(item);
+                    foreach (var item in transient)
+                    {
+                        _sessions.Remove(item);
+                    }
+
+                    previous.EndedAtUtc = null;
+                    previous.EndReason = SessionEndReason.None;
+                    previous.LastHeartbeatAtUtc = now;
+                    _appSessions[app.Id] = previous;
+                    _appClocks[app.Id] = new SessionClock(timestamp, previous.DurationSeconds);
+                    _dirty = true;
+                    return;
                 }
-
-                previous.EndedAtUtc = null;
-                previous.EndReason = SessionEndReason.None;
-                previous.LastHeartbeatAtUtc = now;
-                _appSessions[app.Id] = previous;
-                _appClocks[app.Id] = new SessionClock(timestamp, previous.DurationSeconds);
-                _dirty = true;
-                return;
             }
-        }
 
-        var session = new ActivitySession
-        {
-            ApplicationId = app.Id,
-            StartedAtUtc = now,
-            LastHeartbeatAtUtc = now,
-            State = ActivityState.Active,
-        };
-        _sessions.Add(session);
-        _appSessions[app.Id] = session;
-        _appClocks[app.Id] = new SessionClock(timestamp, 0);
-        _dirty = true;
+            var session = new ActivitySession
+            {
+                ApplicationId = app.Id,
+                StartedAtUtc = now,
+                LastHeartbeatAtUtc = now,
+                State = ActivityState.Active,
+            };
+            _sessions.Add(session);
+            _appSessions[app.Id] = session;
+            _appClocks[app.Id] = new SessionClock(timestamp, 0);
+            _dirty = true;
+        }
     }
 
     private void StartStateSessionIfNeeded(ActivityState state)
@@ -426,21 +631,24 @@ public sealed class ActivitySessionService : IActivitySessionService
             return;
         }
 
-        if (_stateSession?.State == state)
+        lock (_sessionsLock)
         {
-            return;
-        }
+            if (_stateSession?.State == state)
+            {
+                return;
+            }
 
-        CompleteStateSession();
-        _stateClock = new SessionClock(_timeProvider.GetTimestamp(), 0);
-        _stateSession = new ActivitySession
-        {
-            StartedAtUtc = _timeProvider.UtcNow,
-            LastHeartbeatAtUtc = _timeProvider.UtcNow,
-            State = state,
-        };
-        _sessions.Add(_stateSession);
-        _dirty = true;
+            CompleteStateSession();
+            _stateClock = new SessionClock(_timeProvider.GetTimestamp(), 0);
+            _stateSession = new ActivitySession
+            {
+                StartedAtUtc = _timeProvider.UtcNow,
+                LastHeartbeatAtUtc = _timeProvider.UtcNow,
+                State = state,
+            };
+            _sessions.Add(_stateSession);
+            _dirty = true;
+        }
     }
 
     private void CompleteAppSession(Guid appId, SessionEndReason reason)
@@ -450,15 +658,18 @@ public sealed class ActivitySessionService : IActivitySessionService
             return;
         }
 
-        UpdateSessionDuration(session, _appClocks[appId]);
-        var now = _timeProvider.UtcNow;
-        session.EndedAtUtc = now;
-        session.LastHeartbeatAtUtc = now;
-        session.EndReason = reason;
-        _appSessions.Remove(appId);
-        _appClocks.Remove(appId);
-        SplitAcrossLocalMidnights(session);
-        _dirty = true;
+        lock (_sessionsLock)
+        {
+            UpdateSessionDuration(session, _appClocks[appId]);
+            var now = _timeProvider.UtcNow;
+            session.EndedAtUtc = now;
+            session.LastHeartbeatAtUtc = now;
+            session.EndReason = reason;
+            _appSessions.Remove(appId);
+            _appClocks.Remove(appId);
+            SplitAcrossLocalMidnights(session);
+            _dirty = true;
+        }
     }
 
     private void CompleteStateSession()
@@ -468,12 +679,17 @@ public sealed class ActivitySessionService : IActivitySessionService
             return;
         }
 
-        UpdateSessionDuration(_stateSession, _stateClock);
-        var now = _timeProvider.UtcNow;
-        _stateSession.EndedAtUtc = now;
-        _stateSession.LastHeartbeatAtUtc = now;
-        _stateSession = null;
-        _dirty = true;
+        lock (_sessionsLock)
+        {
+            UpdateSessionDuration(_stateSession, _stateClock);
+            var now = _timeProvider.UtcNow;
+            var session = _stateSession;
+            session.EndedAtUtc = now;
+            session.LastHeartbeatAtUtc = now;
+            _stateSession = null;
+            SplitAcrossLocalMidnights(session);
+            _dirty = true;
+        }
     }
 
     private void CompleteAllSessions(SessionEndReason reason)
@@ -509,39 +725,48 @@ public sealed class ActivitySessionService : IActivitySessionService
             return;
         }
 
-        _sessions.Remove(session);
-        var cursorUtc = session.StartedAtUtc;
-        var remainingSeconds = session.DurationSeconds;
-        while (cursorUtc < endedAtUtc)
+        lock (_sessionsLock)
         {
-            var cursorLocal = cursorUtc.ToLocalTime();
-            var nextLocalMidnight = cursorLocal.Date.AddDays(1);
-            var nextBoundaryUtc = nextLocalMidnight.ToUniversalTime();
-            var segmentEnd = nextBoundaryUtc < endedAtUtc ? nextBoundaryUtc : endedAtUtc;
-            var segmentWallSeconds = Math.Max(0, (long)(segmentEnd - cursorUtc).TotalSeconds);
-            var segmentSeconds = segmentEnd == endedAtUtc
-                ? remainingSeconds
-                : Math.Min(remainingSeconds, segmentWallSeconds);
-
-            var segment = session.Clone();
-            segment.Id = Guid.NewGuid();
-            segment.StartedAtUtc = cursorUtc;
-            segment.EndedAtUtc = segmentEnd;
-            segment.DurationSeconds = segmentSeconds;
-            if (segmentEnd < endedAtUtc)
+            _sessions.Remove(session);
+            var cursorUtc = session.StartedAtUtc;
+            var remainingSeconds = session.DurationSeconds;
+            while (cursorUtc < endedAtUtc)
             {
-                segment.EndReason = SessionEndReason.Midnight;
-            }
+                var cursorLocal = cursorUtc.ToLocalTime();
+                var nextLocalMidnight = cursorLocal.Date.AddDays(1);
+                var nextBoundaryUtc = nextLocalMidnight.ToUniversalTime();
+                var segmentEnd = nextBoundaryUtc < endedAtUtc ? nextBoundaryUtc : endedAtUtc;
+                var segmentWallSeconds = Math.Max(0, (long)(segmentEnd - cursorUtc).TotalSeconds);
+                var segmentSeconds = segmentEnd == endedAtUtc
+                    ? remainingSeconds
+                    : Math.Min(remainingSeconds, segmentWallSeconds);
 
-            _sessions.Add(segment);
-            remainingSeconds -= segmentSeconds;
-            cursorUtc = segmentEnd;
+                var segment = session.Clone();
+                segment.Id = Guid.NewGuid();
+                segment.StartedAtUtc = cursorUtc;
+                segment.EndedAtUtc = segmentEnd;
+                segment.DurationSeconds = segmentSeconds;
+                if (segmentEnd < endedAtUtc)
+                {
+                    segment.EndReason = SessionEndReason.Midnight;
+                }
+
+                _sessions.Add(segment);
+                remainingSeconds -= segmentSeconds;
+                cursorUtc = segmentEnd;
+            }
         }
     }
 
     private void RecoverOpenSessions()
     {
-        foreach (var session in _sessions.Where(item => item.EndedAtUtc is null))
+        List<ActivitySession> open;
+        lock (_sessionsLock)
+        {
+            open = _sessions.Where(item => item.EndedAtUtc is null).ToList();
+        }
+
+        foreach (var session in open)
         {
             var end = session.LastHeartbeatAtUtc > session.StartedAtUtc
                 ? session.LastHeartbeatAtUtc
@@ -549,11 +774,15 @@ public sealed class ActivitySessionService : IActivitySessionService
             session.EndedAtUtc = end;
             session.DurationSeconds = Math.Max(0, (long)(end - session.StartedAtUtc).TotalSeconds);
             session.EndReason = SessionEndReason.Recovered;
+            SplitAcrossLocalMidnights(session);
             _dirty = true;
         }
     }
 
-    private async Task SaveIfNeededAsync(bool force, CancellationToken cancellationToken)
+    private async Task SaveIfNeededAsync(
+        bool force,
+        CancellationToken cancellationToken,
+        bool allowForceThrottle = false)
     {
         if (!_dirty)
         {
@@ -562,14 +791,54 @@ public sealed class ActivitySessionService : IActivitySessionService
 
         var due = _timeProvider.UtcNow - _lastSaveAtUtc >=
                   TimeSpan.FromSeconds(Math.Max(5, _settings.AutoSaveSeconds));
+        if (allowForceThrottle && force && !due &&
+            _timeProvider.UtcNow - _lastSaveAtUtc < TimeSpan.FromSeconds(15))
+        {
+            // 频繁在已配置/未配置软件之间切换时，不每次都重写整份历史；
+            // 15 秒兜底仍能保证异常退出时最多丢失一小段记录。显式退出/清空不受此限制。
+            force = false;
+        }
+
         if (!force && !due)
         {
             return;
         }
 
-        await _store.SaveSessionsAsync(_sessions, cancellationToken);
+        var snapshot = Sessions;
+        await _store.SaveSessionsAsync(snapshot, cancellationToken);
         _lastSaveAtUtc = _timeProvider.UtcNow;
         _dirty = false;
+    }
+
+    /// <summary>按当前配置重新匹配前台窗口；配置被删除或停用后返回 null。</summary>
+    private void RefreshCurrentMatch()
+    {
+        _currentApp = _currentWindow is null ? null : _matcher.Match(_currentWindow, _apps);
+    }
+
+    /// <summary>按 MaxHistoryDays 清理过期历史；每天最多扫描一次，避免长时间运行后无限增长。</summary>
+    private void PruneExpiredSessions()
+    {
+        var localToday = DateOnly.FromDateTime(_timeProvider.UtcNow.ToLocalTime());
+        if (localToday == _lastPruneDate)
+        {
+            return;
+        }
+
+        _lastPruneDate = localToday;
+        var cutoff = localToday.AddDays(-Math.Max(7, _settings.MaxHistoryDays));
+        var removed = 0;
+        lock (_sessionsLock)
+        {
+            removed = _sessions.RemoveAll(session =>
+                session.EndedAtUtc is not null &&
+                DateOnly.FromDateTime(session.StartedAtUtc.ToLocalTime()) < cutoff);
+        }
+
+        if (removed > 0)
+        {
+            _dirty = true;
+        }
     }
 
     private void Publish()
@@ -639,6 +908,15 @@ public sealed class ActivitySessionService : IActivitySessionService
             or ActivityState.Locked
             or ActivityState.Suspended
             or ActivityState.Paused;
+
+    private static void AddProcessName(ISet<string> names, string value)
+    {
+        var name = System.IO.Path.GetFileNameWithoutExtension(value?.Trim());
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            names.Add(name);
+        }
+    }
 
     /// <summary>单个会话的单调计时：起点时间戳 + 已并入的基础时长（短切换合并时保留旧时长）。</summary>
     private readonly struct SessionClock(long startTimestamp, long baseDuration)

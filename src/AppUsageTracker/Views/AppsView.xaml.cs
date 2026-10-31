@@ -11,13 +11,22 @@ public partial class AppsView : UserControl
     public AppsView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is AppsViewModel viewModel)
+        {
+            viewModel.Activate();
+        }
     }
 
     private void OnCloseScan(object sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is AppsViewModel viewModel)
         {
-            viewModel.RunningProcesses.Clear();
+            viewModel.CloseProcessScan();
         }
     }
 
@@ -43,22 +52,31 @@ public partial class AppsView : UserControl
         }
     }
 
-    /// <summary>编辑弹窗打开时按 Esc 等同于「取消」。</summary>
+    /// <summary>编辑弹窗或进程选择浮层打开时按 Esc 等同于取消。</summary>
     private void OnPreviewKeyDown(object sender, KeyEventArgs eventArgs)
     {
         if (eventArgs.Key != Key.Escape ||
-            DataContext is not AppsViewModel viewModel ||
-            !viewModel.IsEditorOpen)
+            DataContext is not AppsViewModel viewModel)
         {
             return;
         }
 
-        if (viewModel.CancelEditorCommand.CanExecute(null))
+        if (viewModel.IsEditorOpen)
         {
-            viewModel.CancelEditorCommand.Execute(null);
+            if (viewModel.CancelEditorCommand.CanExecute(null))
+            {
+                viewModel.CancelEditorCommand.Execute(null);
+            }
+
+            eventArgs.Handled = true;
+            return;
         }
 
-        eventArgs.Handled = true;
+        if (viewModel.IsProcessPickerOpen)
+        {
+            viewModel.CloseProcessScan();
+            eventArgs.Handled = true;
+        }
     }
 
     /// <summary>首次加载时同步一次下拉框自身的 tooltip。</summary>

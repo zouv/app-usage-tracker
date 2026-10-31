@@ -65,15 +65,22 @@ sh manager.sh start   # Launch the app
 
 Run every command as `sh manager.sh <command>`.
 
-Windows users can skip Git Bash and double-click the `.bat` scripts directly:
+Windows users can skip Git Bash and double-click the `.bat` scripts directly. Shared logic lives in `scripts/*.ps1`; the entrypoint selects PowerShell 7 or Windows PowerShell automatically:
 
 | Script | Description |
 | --- | --- |
-| `build.bat` | Build the solution (args `Debug`/`Release`) |
-| `test.bat` | Run unit tests (args `Debug`/`Release`) |
-| `publish.bat` | Publish a self-contained single file to `dist/` (args `self`/`fx`) |
-| `clean.bat` | Clean `bin`/`obj`/`dist` |
+| `build.bat` | Build the solution (args `Debug`/`Release`; extra `dotnet build` args supported) |
+| `test.bat` | Run every test project (args `Debug`/`Release`; extra `dotnet test` args supported) |
+| `dev.bat` | Rebuild Debug and start for development, asking any running instance to close normally first |
+| `run.bat` | Start the built app, building the selected configuration first if needed |
+| `stop.bat` | Request a normal close and wait; never force-kills. Exit from the tray if the window only minimizes |
+| `status.bat` | Show app processes and script-managed run state |
+| `publish.bat` | Stage and verify a single file before publishing to `dist/` (args `self`/`fx`) |
+| `package.bat` | Alias for `publish.bat` |
+| `clean.bat` | Clean managed build artifacts; refuses while the app is running and never deletes user data |
 | `ci.bat` | One-shot pipeline: clean → build Release → test Release → publish self |
+
+BAT scripts pause after completion by default. Set `APP_USAGE_TRACKER_NO_PAUSE=1` for automation.
 
 ## 🧱 Tech Stack
 
@@ -95,6 +102,7 @@ app-usage-tracker/
 ├── tests/AppUsageTracker.Tests/  xUnit unit tests
 ├── docs/                         Usage, tech, design and UI assets
 ├── tools/                        Icon generation and UI capture scripts
+├── scripts/                      PowerShell build, run and release logic behind BAT entries
 ├── .claude/                      Shared documentation hook and opt-in skills
 ├── manager.sh                    Unified build, run, test and release entrypoint
 ├── check-docs.sh                 Mechanical documentation checks

@@ -1,3 +1,4 @@
+using AppUsageTracker.Models;
 using Timer = System.Timers.Timer;
 
 namespace AppUsageTracker.Services;
@@ -10,6 +11,7 @@ public sealed class TrackingCoordinator : IDisposable
     private readonly IActivitySessionService _activityService;
     private readonly IProcessScanner _processScanner;
     private readonly Timer _heartbeatTimer;
+    private int _heartbeatRunning;
     private bool _started;
 
     public TrackingCoordinator(
@@ -29,15 +31,36 @@ public sealed class TrackingCoordinator : IDisposable
         {
             AutoReset = true,
         };
-        _heartbeatTimer.Elapsed += async (_, _) => await SafeInvokeAsync(
-            async cancellationToken =>
+        _heartbeatTimer.Elapsed += async (_, _) =>
+        {
+            // 进程枚举可能慢于心跳间隔；用重入保护避免多个扫描并发排队。
+            if (Interlocked.Exchange(ref _heartbeatRunning, 1) == 1)
             {
-                await _activityService.HandleRunningProcessesAsync(
-                    _processScanner.EnumerateRunningProcesses(),
-                    cancellationToken);
-                await _activityService.SetIdleAsync(CalculateIdleState(), cancellationToken);
-                await _activityService.HeartbeatAsync(cancellationToken);
-            });
+                return;
+            }
+
+            try
+            {
+                await SafeInvokeAsync(
+                    async cancellationToken =>
+                    {
+                        IReadOnlyList<RunningProcessInfo> processes =
+                            _activityService.ShouldScanRunningProcesses
+                                ? _processScanner.EnumerateRunningProcesses(
+                                    _activityService.RunningProcessScanNames)
+                                : Array.Empty<RunningProcessInfo>();
+                        await _activityService.HandleRunningProcessesAsync(
+                            processes,
+                            cancellationToken);
+                        await _activityService.SetIdleAsync(CalculateIdleState(), cancellationToken);
+                        await _activityService.HeartbeatAsync(cancellationToken);
+                    });
+            }
+            finally
+            {
+                Volatile.Write(ref _heartbeatRunning, 0);
+            }
+        };
     }
 
     public int HeartbeatSeconds
@@ -63,13 +86,27 @@ public sealed class TrackingCoordinator : IDisposable
         _heartbeatTimer.Start();
     }
 
-    public void Dispose()
+    public void Stop()
     {
+        if (!_started)
+        {
+            return;
+        }
+
+        _started = false;
         _heartbeatTimer.Stop();
-        _heartbeatTimer.Dispose();
         _foregroundMonitor.ForegroundWindowChanged -= OnForegroundChanged;
         _idleMonitor.IdleStateChanged -= OnIdleChanged;
         _sessionMonitor.StateChanged -= OnSessionStateChanged;
+        _foregroundMonitor.Stop();
+        _idleMonitor.Stop();
+        _sessionMonitor.Stop();
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        _heartbeatTimer.Dispose();
         _foregroundMonitor.Dispose();
         _idleMonitor.Dispose();
         _sessionMonitor.Dispose();

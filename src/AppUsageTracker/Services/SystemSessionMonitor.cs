@@ -38,11 +38,16 @@ public sealed class SystemSessionMonitor : ISystemSessionMonitor
 
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs args)
     {
-        if (args.Reason == SessionSwitchReason.SessionLock)
+        if (args.Reason is SessionSwitchReason.SessionLock
+            or SessionSwitchReason.ConsoleDisconnect
+            or SessionSwitchReason.RemoteDisconnect)
         {
             SetState(SystemSessionState.Locked);
         }
-        else if (args.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.SessionLogon)
+        else if (args.Reason is SessionSwitchReason.SessionUnlock
+                 or SessionSwitchReason.SessionLogon
+                 or SessionSwitchReason.ConsoleConnect
+                 or SessionSwitchReason.RemoteConnect)
         {
             SetState(SystemSessionState.Available);
         }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Windows;
 using AppUsageTracker.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,6 +24,10 @@ public partial class SettingsViewModel : ObservableObject
         _startup = startup;
         _store = store;
         Load();
+        if (Application.Current is App app)
+        {
+            app.HotkeyRegistrationChanged += OnHotkeyRegistrationChanged;
+        }
     }
 
     public IReadOnlyList<string> ThemeOptions { get; } = ["System", "Light", "Dark"];
@@ -77,18 +82,25 @@ public partial class SettingsViewModel : ObservableObject
     private int _dailySummaryMinute;
 
     [ObservableProperty]
-    private bool _saveWindowTitles;
-
-    [ObservableProperty]
     private string _theme = "System";
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    [ObservableProperty]
+    private string _validationMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _hotkeyStatusMessage = string.Empty;
+
     partial void OnAutoStartChanged(bool value) => ApplyIfNotLoading();
     partial void OnStartMinimizedChanged(bool value) => ApplyIfNotLoading();
     partial void OnMinimizeToTrayOnCloseChanged(bool value) => ApplyIfNotLoading();
-    partial void OnHotkeyChanged(string value) => ApplyIfNotLoading();
+    partial void OnHotkeyChanged(string value)
+    {
+        HotkeyStatusMessage = string.Empty;
+        ApplyIfNotLoading();
+    }
     partial void OnExcludeIdleTimeChanged(bool value) => ApplyIfNotLoading();
     partial void OnIdleThresholdMinutesChanged(int value) => ApplyIfNotLoading();
     partial void OnShortSwitchSecondsChanged(int value) => ApplyIfNotLoading();
@@ -97,16 +109,23 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnNotificationsEnabledChanged(bool value) => ApplyIfNotLoading();
     partial void OnDailySummaryHourChanged(int value) => ApplyIfNotLoading();
     partial void OnDailySummaryMinuteChanged(int value) => ApplyIfNotLoading();
-    partial void OnSaveWindowTitlesChanged(bool value) => ApplyIfNotLoading();
     partial void OnThemeChanged(string value) => ApplyIfNotLoading();
     partial void OnLanguageChanged(string value) => ApplyIfNotLoading();
 
     [RelayCommand]
     private void OpenDataDirectory()
     {
-        var path = ((IAppDataPathProvider)new AppDataPathProvider()).RootDirectory;
-        Directory.CreateDirectory(path);
-        Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+        try
+        {
+            var path = new AppDataPathProvider().RootDirectory;
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("打开数据目录失败。", exception);
+            StatusMessage = exception.Message;
+        }
     }
 
     [RelayCommand]
@@ -118,8 +137,16 @@ public partial class SettingsViewModel : ObservableObject
         };
         if (dialog.ShowDialog() == true)
         {
-            var target = await _store.CreateBackupAsync(dialog.FolderName);
-            StatusMessage = LocalizationService.T("Loc.Settings.BackupSaved", target);
+            try
+            {
+                var target = await _store.CreateBackupAsync(dialog.FolderName);
+                StatusMessage = LocalizationService.T("Loc.Settings.BackupSaved", target);
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Error("创建备份失败。", exception);
+                StatusMessage = LocalizationService.T("Loc.Settings.BackupFailed", exception.Message);
+            }
         }
     }
 
@@ -130,10 +157,52 @@ public partial class SettingsViewModel : ObservableObject
         {
             Filter = LocalizationService.T("Loc.Settings.BackupFilter"),
         };
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog() != true)
         {
-            await _store.ImportBackupAsync(dialog.FileName);
-            StatusMessage = LocalizationService.T("Loc.Settings.BackupRestored");
+            return;
+        }
+
+        var confirmed = MessageBox.Show(
+            Application.Current.MainWindow,
+            LocalizationService.T("Loc.Settings.RestoreConfirm"),
+            LocalizationService.T("Loc.Settings.RestoreConfirmTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var prepared = false;
+        try
+        {
+            // 先停止监听并禁止收尾写盘，防止导入后的文件又被内存中的旧数据覆盖。
+            await _runtime.PrepareForRestoreAsync();
+            prepared = true;
+            try
+            {
+                await _store.ImportBackupAsync(dialog.FileName);
+            }
+            catch
+            {
+                await _runtime.ResumeAfterRestoreFailureAsync();
+                throw;
+            }
+
+            MessageBox.Show(
+                Application.Current.MainWindow,
+                LocalizationService.T("Loc.Settings.BackupRestoredExit"),
+                LocalizationService.T("Loc.Settings.RestoreConfirmTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            App.Current.ExitWithoutSaving();
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Error("恢复备份失败。", exception);
+            StatusMessage = LocalizationService.T(
+                prepared ? "Loc.Settings.RestoreFailedResumed" : "Loc.Settings.RestoreFailed",
+                exception.Message);
         }
     }
 
@@ -149,8 +218,19 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearHistoryAsync()
     {
+        var confirmed = MessageBox.Show(
+            Application.Current.MainWindow,
+            LocalizationService.T("Loc.Settings.ClearHistoryConfirm"),
+            LocalizationService.T("Loc.Settings.ClearHistoryConfirmTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        if (!confirmed)
+        {
+            return;
+        }
+
         await _runtime.ActivityService.SetPausedAsync(true);
-        _runtime.Sessions.Clear();
+        await _runtime.ActivityService.ClearSessionsAsync();
         _runtime.Corrections.Clear();
         await _runtime.SaveSessionsAndCorrectionsAsync();
         _runtime.NotifyDataChanged();
@@ -165,6 +245,13 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (!TryValidateNumericSettings(out var validationMessage))
+        {
+            ValidationMessage = validationMessage;
+            return;
+        }
+
+        ValidationMessage = string.Empty;
         ApplyCurrent();
     }
 
@@ -172,6 +259,12 @@ public partial class SettingsViewModel : ObservableObject
     private void ApplyCurrent()
     {
         var settings = _runtime.Settings;
+        var autoStartChanged = settings.AutoStart != AutoStart;
+        var hotkeyChanged = !string.Equals(settings.Hotkey, Hotkey, StringComparison.Ordinal);
+        var themeChanged = !string.Equals(settings.Theme, Theme, StringComparison.Ordinal);
+        var language = LocalizationService.Normalize(Language);
+        var languageChanged = !string.Equals(settings.Language, language, StringComparison.Ordinal);
+
         settings.AutoStart = AutoStart;
         settings.StartMinimized = StartMinimized;
         settings.MinimizeToTrayOnClose = MinimizeToTrayOnClose;
@@ -185,16 +278,67 @@ public partial class SettingsViewModel : ObservableObject
         settings.NotificationsEnabled = NotificationsEnabled;
         settings.DailySummaryHour = Math.Clamp(DailySummaryHour, 0, 23);
         settings.DailySummaryMinute = Math.Clamp(DailySummaryMinute, 0, 59);
-        settings.SaveWindowTitles = SaveWindowTitles;
         settings.Theme = Theme;
-        settings.Language = LocalizationService.Normalize(Language);
+        settings.Language = language;
 
-        _startup.SetEnabled(AutoStart);
-        ThemeService.Apply(Theme);
-        LocalizationService.Apply(Language);
-        App.Current.ApplyHotkey();
+        if (autoStartChanged)
+        {
+            try
+            {
+                _startup.SetEnabled(AutoStart);
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Debug($"更新开机启动设置失败：{exception.Message}");
+            }
+        }
+
+        if (themeChanged)
+        {
+            ThemeService.Apply(Theme);
+        }
+
+        if (languageChanged)
+        {
+            LocalizationService.Apply(language);
+        }
+
+        var hotkeyApplied = true;
+        if (hotkeyChanged)
+        {
+            hotkeyApplied = App.Current.ApplyHotkey();
+        }
+
         _ = PersistAsync();
-        StatusMessage = LocalizationService.T("Loc.Settings.AutoSaved");
+        StatusMessage = hotkeyApplied
+            ? LocalizationService.T("Loc.Settings.AutoSaved")
+            : LocalizationService.T("Loc.Settings.HotkeyFailed", Hotkey);
+    }
+
+    private bool TryValidateNumericSettings(out string message)
+    {
+        var invalidKey = IdleThresholdMinutes is < 1 or > 120 ? "Loc.Settings.Range.Idle"
+            : ShortSwitchSeconds is < 0 or > 60 ? "Loc.Settings.Range.ShortSwitch"
+            : HeartbeatSeconds is < 5 or > 300 ? "Loc.Settings.Range.Heartbeat"
+            : AutoSaveSeconds is < 5 or > 3600 ? "Loc.Settings.Range.AutoSave"
+            : MaxHistoryDays is < 7 or > 3650 ? "Loc.Settings.Range.History"
+            : DailySummaryHour is < 0 or > 23 || DailySummaryMinute is < 0 or > 59
+                ? "Loc.Settings.Range.DailySummary"
+                : null;
+        message = invalidKey is null
+            ? string.Empty
+            : LocalizationService.T("Loc.Settings.InvalidNumber", LocalizationService.T(invalidKey));
+        return invalidKey is null;
+    }
+
+    private void OnHotkeyRegistrationChanged(bool succeeded, string hotkey)
+    {
+        HotkeyStatusMessage = succeeded
+            ? string.Empty
+            : LocalizationService.T("Loc.Settings.HotkeyFailed", hotkey);
+        StatusMessage = succeeded
+            ? LocalizationService.T("Loc.Settings.AutoSaved")
+            : HotkeyStatusMessage;
     }
 
     private async Task PersistAsync()
@@ -228,7 +372,6 @@ public partial class SettingsViewModel : ObservableObject
             NotificationsEnabled = settings.NotificationsEnabled;
             DailySummaryHour = settings.DailySummaryHour;
             DailySummaryMinute = settings.DailySummaryMinute;
-            SaveWindowTitles = settings.SaveWindowTitles;
             Theme = settings.Theme;
             Language = LocalizationService.Normalize(settings.Language);
         }
