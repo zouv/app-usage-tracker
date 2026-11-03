@@ -58,14 +58,15 @@ sh manager.sh start   # 启动应用
 | `start` | 启动 WPF 应用，可追加 `dotnet run` 参数 |
 | `test` | 运行单元测试，可追加 `dotnet test` 参数 |
 | `icon` | 重新生成应用图标（`Assets/app.ico` + `app.png`） |
-| `pack` | 发布 win-x64 自包含单文件到 `dist/`，可追加发布参数 |
+| `package` | 打包 dev 调试 zip 与 release 免安装目录/zip 到 `dist/`，可追加发布参数 |
+| `pack` | `package` 的兼容别名 |
 | `release` | 按 `release <version>` 升级版本号并打包（本地，不含 git/CHANGELOG） |
 | `clean` | 清理构建与运行产物 |
 | `help` | 显示帮助 |
 
 所有命令统一以 `sh manager.sh <命令>` 形式运行。
 
-Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本；公共逻辑位于 `scripts/*.ps1`，自动选用 PowerShell 7 或 Windows PowerShell：
+Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本；公共逻辑位于 `scripts/*.ps1`。除 `package.bat` 固定使用 Windows PowerShell 外，其余入口自动选用 PowerShell 7 或 Windows PowerShell：
 
 | 脚本 | 说明 |
 | --- | --- |
@@ -75,12 +76,28 @@ Windows 用户也可不装 Git Bash，直接双击运行 `.bat` 脚本；公共�
 | `run.bat` | 启动已构建应用；缺少对应配置时先构建（参数 `Debug`/`Release`） |
 | `stop.bat` | 请求正常关闭并等待；不会强制结束进程，托盘常驻时需从托盘菜单退出 |
 | `status.bat` | 查看应用进程与脚本启动记录 |
-| `publish.bat` | 暂存并验证单文件后发布到 `dist/`（参数 `self`/`fx`） |
-| `package.bat` | `publish.bat` 的别名 |
+| `package.bat` | 打包 dev 调试 zip 与 release 免安装目录/zip 到 `dist/`（检测到运行实例先询问） |
+| `publish.bat` | 兼容旧入口，等价于 `package.bat`；旧的 `self`/`fx` 参数忽略 |
 | `clean.bat` | 清理受管的构建产物；应用运行时拒绝执行，不删除用户数据 |
-| `ci.bat` | 一键流水线：clean → build Release → test Release → publish self |
+| `ci.bat` | 一键流水线：clean → build Release → test Release → package |
 
-BAT 默认在结束后暂停；自动化调用可设置 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停。
+BAT 脚本默认在结束后暂停；`package.bat` 为便于 CI / 自动化不暂停。自动化调用其它脚本可设置 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停。
+
+## 📦 打包
+
+```bash
+sh manager.sh package
+```
+
+版本号单一来源是 `src/AppUsageTracker/AppUsageTracker.csproj` 的 `<Version>`。产物：
+
+| 路径 | 内容 |
+| --- | --- |
+| `dist/dev/AppUsageTracker_<版本>_x64-unpack-debug.zip` | Debug 构建 + 构建日志 + `build-info.txt`，zip 内有同名顶层目录 |
+| `dist/release/unpack/` | Release win-x64 自包含单文件免安装目录（含 README 与离线截图资源） |
+| `dist/release/AppUsageTracker_<版本>_x64-unpack.zip` | 从 `unpack` 内部打包，解压后 exe 直接在 zip 根下 |
+
+打包先在唯一暂存目录校验程序集版本与 zip 内容，成功后事务更新 `dist/dev` / `dist/release`，失败回滚并保留暂存现场；旧布局的 `dist/AppUsageTracker.exe` 会在新布局首次打包成功后清理。若检测到运行中的 AppUsageTracker，会列出进程并询问，只有输入 `Y` 才关闭（先尝试正常关闭，12 秒后仍未退出则强制结束）并继续，其它输入取消。
 
 ## 🧱 技术栈
 

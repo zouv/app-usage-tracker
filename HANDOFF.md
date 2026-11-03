@@ -5,9 +5,9 @@
 
 ## 状态快照
 
-- **最近更新**：2026-10-31
-- **整体状态**：✅ 1.3.0 功能、发布记录与单文件打包完成；无进行中开发任务，既有交互改造等待 UI 实跑验收
-- **最后验证状态**：Release 构建 ✅ 0 警告；Release 测试 ✅ 126/126；单文件发布 ✅；`sh check-docs.sh` ✅ 0 警告
+- **最近更新**：2026-11-03
+- **整体状态**：✅ 1.3.0 功能与发布记录完成；打包流程已对齐 explorer-tabs 的 dev/release 双产物模式，既有 UI 交互改造仍待实跑验收
+- **最后验证状态**：Release 构建 ✅ 0 警告；Release 测试 ✅ 126/126；`sh manager.sh package` 与 `package.bat` ✅ 生成 `dist/dev` + `dist/release` 并清理旧布局；`sh check-docs.sh` ✅ 0 警告
 
 ## 当前任务（In Progress）
 
@@ -23,19 +23,9 @@
 
 ## 阻塞 / 待决策（Blockers）
 
-- 当前运行实例仍在托盘，尚未进行新 UI 验收；未强杀进程，1.3.0 发布包从独立暂存目录生成。
+- 无技术阻塞；待验收的 UI 检查需要实际启动应用后逐项确认。
 
 ## 下一步（Next Steps）
 
-1. 正常关闭当前实例，运行 `run.bat Release` 或 `sh manager.sh start --configuration Release`，按「待验收」逐项检查。
+1. 运行 `run.bat Release` 或 `sh manager.sh start --configuration Release`，按「待验收」逐项检查。
 2. 通过后清空待验收清单。
-
-## 本任务验证（Verify）
-
-- 构建：`sh manager.sh build --configuration Release` 通过，0 警告。Debug 构建曾因 PID 7024 锁定 `AppUsageTracker.exe` 失败，未强行结束进程。
-- 单测：`sh manager.sh test --configuration Release` 通过 126 项，新增软件删除确认/取消、进程选择清理、时间记录命令与确认、统计选择协调等覆盖。
-- 样式：软件主表局部 RowStyle 已继承全局样式；软件/进程/时间记录改为单选，统计排行改为可持久选中的 ListBox。
-- 文档：`sh check-docs.sh` 通过，0 项警告；`git diff --check` 无空白错误。
-- 隐私与版本：源码、脚本、文档和 PNG 文本元数据未检出本机用户路径等非项目隐私；程序属性与设置页页脚保留允许的作者标记 `zouv`，规则见 AGENTS §3.1。主程序集未检出本机路径字符串，版本字段统一为 1.3.0 / 1.3.0.0。
-- 打包：当前实例占用 `dist/` 且正常关闭等待超时，未强杀；改用独立暂存目录生成 win-x64 自包含单文件，文件版本 1.3.0.0。
-- UI：待关闭旧实例后实跑。

@@ -87,9 +87,9 @@ AppRuntime（共享单例）
 | `tools/generate-icon.ps1` | 已有 | 可重现地生成多尺寸图标 |
 | `tools/capture-ui.ps1` | 已有 | 启动应用、切页并截图，供 UI 实跑核对 |
 | `docs/design/` | 已有 | 产品、技术和界面设计 |
-| `manager.sh` | 已有 | build/start/test/icon/pack/clean/release 统一入口 |
-| `scripts/` | 已有 | BAT 的 PowerShell 实现：构建、测试、运行状态、正常停止、安全清理与暂存发布；运行记录位于 `.runtime/desktop.json` |
-| 根目录 `*.bat` | 已有 | Windows 薄入口，经 `_ps.bat` 统一选择 PowerShell、转发参数与退出码 |
+| `manager.sh` | 已有 | build/start/test/icon/package/pack/clean/release 统一入口 |
+| `scripts/` | 已有 | BAT 的 PowerShell 实现：构建、测试、运行状态、正常停止、安全清理与 dev/release 打包；打包事务与 zip 校验见 `PackageTransaction.ps1`，运行记录位于 `.runtime/desktop.json`，打包暂存位于 `.runtime/staging/` |
+| 根目录 `*.bat` | 已有 | Windows 薄入口；多数经 `_ps.bat` 统一选择 PowerShell、转发参数与退出码，`package.bat` 直接调用 `scripts/package.ps1` 且不暂停，便于 CI/自动化 |
 
 ## 2. 按「我要做什么」反查代码位置（任务 → 入口）
 
@@ -112,7 +112,7 @@ AppRuntime（共享单例）
 | 托盘与通知 | `Services/TrayIconService.cs`、`UsageNotificationService.cs` | 托盘菜单、连续使用提醒、每日摘要 |
 | 会话编辑与导出 | `Services/SessionEditor.cs`、`CsvExportService.cs` | 补录、修改、合并、批量删除、CSV 导出；进行中会话会被拒绝 |
 | 列表选择与危险确认 | `Views/AppsView*`、`TimelineViewModel.cs`、`StatisticsViewModel.cs`、`IConfirmationService.cs` | DataGrid 单选样式、删除/合并确认、排行榜 `SelectedAppRow` 与刷新后选择协调 |
-| 构建、发布与清理 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1` | `cmd_build`、`cmd_test`、`cmd_pack`、`cmd_release`、`cmd_clean`；`dev.ps1`、`desktop.ps1`、`package.ps1` |
+| 构建、打包与清理 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1` | `cmd_build`、`cmd_test`、`cmd_package`、`cmd_release`、`cmd_clean`；`dev.ps1`、`desktop.ps1`、`package.ps1`、`PackageTransaction.ps1` |
 
 ## 3. 关键链路
 
@@ -247,11 +247,11 @@ Windows 注销 / 关机（SessionEnding）
 
 | 入口 | 职责 |
 | --- | --- |
-| `manager.sh` | build/start/test/icon/pack/release/clean/help 统一入口；版本号写入主项目 csproj |
+| `manager.sh` | build/start/test/icon/package（`pack` 别名）/release/clean/help 统一入口；版本号写入主项目 csproj |
 | `_ps.bat`、`scripts/_common.ps1` | BAT 公共入口与 PowerShell 公共路径、进程、运行记录和受管删除 helpers；自动化用 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停 |
 | `build.bat`、`test.bat` | 调用 `scripts/build.ps1`、`test.ps1`；支持配置与追加 dotnet 参数，测试遍历所有测试项目 |
 | `run.bat`、`dev.bat`、`stop.bat`、`status.bat` | 调用 `scripts/desktop.ps1`、`dev.ps1`；开发入口先正常停止再构建 Debug；启动时写 `.runtime/desktop.json`，停止只请求正常关闭并等待，绝不强杀 |
-| `publish.bat`、`package.bat` | 调用 `scripts/package.ps1`；暂存发布、验证单文件后替换 `dist/`，替换失败回滚旧产物 |
+| `package.bat`、`publish.bat` | `package.bat` 直接调用 `scripts/package.ps1`；产出 `dist/dev` 调试 zip 与 `dist/release/unpack` + zip，先写唯一暂存目录并校验版本/单文件/zip，再事务替换与回滚。`publish.bat` 为兼容别名 |
 | `clean.bat`、`ci.bat` | 调用 `scripts/clean.ps1`；清理拒绝运行实例、越界路径和 reparse point，CI 禁用常驻构建服务器并跳过子 BAT 暂停 |
 | `tools/generate-icon.ps1` | 可重现地生成应用图标 |
 | `tools/capture-ui.ps1` | 启动、切页与截图，辅助 UI 实跑核对 |
@@ -289,7 +289,7 @@ Windows 注销 / 关机（SessionEnding）
 - **统计排行榜选择使用稳定软件 Id 协调**：`SelectedAppRow` 是当前选择，刷新后按 `ApplicationId` 重绑定并重算详情；切周期/日期立即清空，不能只保留可能过期的详情字符串。
 
 - **BAT 停止脚本不得强杀应用**：`desktop.ps1` 只发送正常关闭请求；若应用按设置最小化到托盘，等待超时后提示从托盘退出，不得改用 `taskkill /F`。
-- **Windows 清理与发布只操作仓库内受管路径**：删除前拒绝 reparse point；`package.ps1` 必须先暂存并验证单文件，再推广到 `dist/`，不要在发布前删除旧产物。
+- **Windows 清理与打包只操作仓库内受管路径**：删除前拒绝 reparse point；`package.ps1` 必须先在 `.runtime/staging/package-<id>/` 暂存并校验程序集版本、单文件形态与 zip 全项，再用 `Publish-PackageSet` 事务替换 `dist/dev` / `dist/release`，失败逆序回滚并保留暂存现场；不要在打包前删除旧产物。检测到运行实例时只列出进程并询问，输入 `Y` 才可先正常关闭、12 秒后再强制结束；`stop.bat` / `desktop.ps1` 仍不得强杀。
 
 - **取进程路径不能只靠 `Process.MainModule`**：受保护或位数不匹配的进程会拒绝访问；统一使用 `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) + QueryFullProcessImageName` 回退，现有实现位于 `ProcessScanner.TryGetPath` 与 `ForegroundWindowMonitor.QueryPath`。
 - **分类持久化值与显示文案分离**：`TrackedApp.Category` 保持中文稳定值；筛选下拉使用「稳定值 + 本地化标签」的 `OptionItem`，不要比较界面文案。

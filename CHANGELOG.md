@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+### 变更
+
+- 打包改为 dev + release 双产物：`dist/dev/AppUsageTracker_<版本>_x64-unpack-debug.zip`、`dist/release/unpack/` 与 `dist/release/AppUsageTracker_<版本>_x64-unpack.zip`；release 为 win-x64 自包含单文件且不再包含调试符号，旧 `dist/AppUsageTracker.exe` 在首次新布局打包成功后清理。
+- 打包先在唯一暂存目录校验程序集版本、单文件形态与 zip 内每个文件的内容，成功后事务替换 `dist/dev` / `dist/release`，失败回滚并保留暂存现场；检测到运行实例时列出进程并询问，输入 `Y` 才关闭（正常关闭超时后强制结束），非交互环境直接拒绝。
+- `manager.sh` 新增 `package` 命令并保留 `pack` 别名；`publish.bat` 改为兼容别名，旧 `self` / `fx` 参数不再生效；`ci.bat` 改为 clean → build Release → test Release → package。
+
 ## [1.3.0] - 2026-10-31
 
 ### 新增

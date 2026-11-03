@@ -23,6 +23,23 @@ require_cmd() {
   }
 }
 
+run_powershell_script() {
+  local script="$1"
+  shift
+  local runner
+  if command -v pwsh >/dev/null 2>&1; then
+    runner="pwsh"
+  elif command -v powershell >/dev/null 2>&1; then
+    runner="powershell"
+  else
+    err "缺少命令：powershell 或 pwsh"
+    exit 1
+  fi
+  local win_script
+  win_script="$(cygpath -w "${script}" 2>/dev/null || echo "${script}")"
+  "${runner}" -NoProfile -ExecutionPolicy Bypass -File "${win_script}" "$@"
+}
+
 cmd_build() {
   require_cmd dotnet
   log "构建解决方案"
@@ -43,20 +60,11 @@ cmd_test() {
   ok "测试完成"
 }
 
-cmd_pack() {
+cmd_package() {
   require_cmd dotnet
-  rm -rf "${DIST_DIR}"
-  mkdir -p "${DIST_DIR}"
-  log "发布 win-x64 自包含单文件"
-  dotnet publish "${APP_PROJECT}" \
-    -c Release \
-    -r win-x64 \
-    --self-contained true \
-    -p:PublishSingleFile=true \
-    -p:PublishReadyToRun=false \
-    -o "${DIST_DIR}" \
-    "$@"
-  ok "发布完成：${DIST_DIR}"
+  log "打包 dev 调试包与 release 免安装包"
+  run_powershell_script "${PROJECT_ROOT}/scripts/package.ps1" "$@"
+  ok "打包完成：${DIST_DIR}/dev、${DIST_DIR}/release"
 }
 
 cmd_release() {
@@ -86,10 +94,9 @@ cmd_release() {
     -e "s|<AssemblyVersion>[0-9.]+</AssemblyVersion>|<AssemblyVersion>${file_version}</AssemblyVersion>|" \
     "${APP_PROJECT}"
 
-  # 结束可能驻留后台的实例，否则 dist\AppUsageTracker.exe 被占用无法覆盖
-  taskkill //F //IM AppUsageTracker.exe >/dev/null 2>&1 || true
+  # 运行实例由打包脚本列出并询问是否关闭；不在版本升级命令里强制结束进程。
 
-  cmd_pack
+  cmd_package
 }
 
 cmd_icon() {
@@ -129,7 +136,8 @@ app-usage-tracker — manager.sh
   start          启动 WPF 应用（可追加 dotnet run 参数）
   test           运行单元测试（可追加 dotnet test 参数）
   icon           重新生成应用图标（Assets/app.ico + app.png）
-  pack           发布 win-x64 自包含单文件到 dist/（可追加发布参数）
+  package        打包 dev 调试 zip 与 release 免安装目录/zip 到 dist/（可追加发布参数）
+  pack           package 的兼容别名
   release        按 release <版本> 升级 csproj 版本号并打包（本地，不含 git/CHANGELOG）
   clean          清理构建、发布和运行时产物
   help           显示帮助
@@ -144,7 +152,7 @@ main() {
     start|run) cmd_start "$@" ;;
     test) cmd_test "$@" ;;
     icon) cmd_icon ;;
-    pack) cmd_pack "$@" ;;
+    pack|package) cmd_package "$@" ;;
     release) cmd_release "$@" ;;
     clean) cmd_clean ;;
     help|-h|--help) cmd_help ;;

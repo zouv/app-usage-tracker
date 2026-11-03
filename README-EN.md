@@ -58,14 +58,15 @@ sh manager.sh start   # Launch the app
 | `start` | Launch the WPF app; extra `dotnet run` arguments are supported |
 | `test` | Run unit tests; extra `dotnet test` arguments are supported |
 | `icon` | Regenerate the app icon (`Assets/app.ico` + `app.png`) |
-| `pack` | Publish a win-x64 self-contained single file to `dist/` |
+| `package` | Package the dev zip and release folder/zip into `dist/`; extra publish arguments are supported |
+| `pack` | Alias for `package` |
 | `release` | Use `release <version>` to bump the version and package locally |
 | `clean` | Clean build and runtime artifacts |
 | `help` | Show help |
 
 Run every command as `sh manager.sh <command>`.
 
-Windows users can skip Git Bash and double-click the `.bat` scripts directly. Shared logic lives in `scripts/*.ps1`; the entrypoint selects PowerShell 7 or Windows PowerShell automatically:
+Windows users can skip Git Bash and double-click the `.bat` scripts directly. Shared logic lives in `scripts/*.ps1`; apart from `package.bat`, which uses Windows PowerShell, the entrypoints select PowerShell 7 or Windows PowerShell automatically:
 
 | Script | Description |
 | --- | --- |
@@ -75,12 +76,28 @@ Windows users can skip Git Bash and double-click the `.bat` scripts directly. Sh
 | `run.bat` | Start the built app, building the selected configuration first if needed |
 | `stop.bat` | Request a normal close and wait; never force-kills. Exit from the tray if the window only minimizes |
 | `status.bat` | Show app processes and script-managed run state |
-| `publish.bat` | Stage and verify a single file before publishing to `dist/` (args `self`/`fx`) |
-| `package.bat` | Alias for `publish.bat` |
+| `package.bat` | Package the dev zip and release folder/zip into `dist/` (asks first if the app is running) |
+| `publish.bat` | Legacy alias for `package.bat`; old `self`/`fx` arguments are ignored |
 | `clean.bat` | Clean managed build artifacts; refuses while the app is running and never deletes user data |
-| `ci.bat` | One-shot pipeline: clean → build Release → test Release → publish self |
+| `ci.bat` | One-shot pipeline: clean → build Release → test Release → package |
 
-BAT scripts pause after completion by default. Set `APP_USAGE_TRACKER_NO_PAUSE=1` for automation.
+BAT scripts pause after completion by default; `package.bat` does not pause so CI and automation can call it directly. Set `APP_USAGE_TRACKER_NO_PAUSE=1` to skip the pause in the other scripts.
+
+## 📦 Packaging
+
+```bash
+sh manager.sh package
+```
+
+The single source of the version is `<Version>` in `src/AppUsageTracker/AppUsageTracker.csproj`. Outputs:
+
+| Path | Content |
+| --- | --- |
+| `dist/dev/AppUsageTracker_<version>_x64-unpack-debug.zip` | Debug build + build log + `build-info.txt`, with a matching top-level folder inside the zip |
+| `dist/release/unpack/` | Portable Release win-x64 self-contained single-file folder (includes README and offline screenshot assets) |
+| `dist/release/AppUsageTracker_<version>_x64-unpack.zip` | Packed from `unpack`; the exe sits directly at the zip root |
+
+Packaging first verifies assembly versions and zip contents in a unique staging directory, then transactionally replaces `dist/dev` / `dist/release`; failures roll back and keep the staging tree. The legacy `dist/AppUsageTracker.exe` is removed after the new layout is published successfully. If AppUsageTracker is running, the script lists the processes and asks; only `Y` closes them (normal close first, forced after 12 seconds if needed) and continues. Any other answer cancels.
 
 ## 🧱 Tech Stack
 

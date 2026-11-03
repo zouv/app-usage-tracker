@@ -107,7 +107,7 @@ sh manager.sh start
 
 并人工确认窗口无重叠、裁切和异常滚动；导航、按钮、输入控件与状态切换正常；关闭窗口和托盘行为符合设置。
 
-发布验证使用 `sh manager.sh pack`。新版本发布流程：判定版本号、预检、整理 CHANGELOG，调用 `sh manager.sh release <version>` 升级版本并打包，复核后再按用户要求提交、打 tag、推送和创建 GitHub Release。
+发布验证使用 `sh manager.sh package`。新版本发布流程：判定版本号、预检、整理 CHANGELOG，调用 `sh manager.sh release <version>` 升级版本并打包，复核后再按用户要求提交、打 tag、推送和创建 GitHub Release。
 
 ## 5. 随开发维护 HANDOFF / ROADMAP / CHANGELOG
 

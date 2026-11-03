@@ -6,7 +6,7 @@ set "APP_USAGE_TRACKER_NO_PAUSE=1"
 
 rem ============================================================
 rem  app-usage-tracker - 一键 CI 流水线
-rem  clean -> build Release -> test Release -> publish self
+rem  clean -> build Release -> test Release -> package (dev + release)
 rem ============================================================
 
 rem 关键：禁用常驻 MSBuild / Roslyn 构建服务器。
@@ -21,12 +21,12 @@ pushd "%~dp0"
 call "%~dp0clean.bat"            || goto :Fail
 call "%~dp0build.bat"   Release  || goto :Fail
 call "%~dp0test.bat"    Release  || goto :Fail
-call "%~dp0publish.bat" self     || goto :Fail
+call "%~dp0package.bat"          || goto :Fail
 
 echo.
 echo ============================================================
 echo  [SUCCESS] CI pipeline completed.
-echo  Artifact: %CD%\dist\AppUsageTracker.exe
+echo  Artifact: %CD%\dist\release\unpack\AppUsageTracker.exe
 echo ============================================================
 popd
 exit /b 0
