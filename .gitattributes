@@ -10,3 +10,4 @@
 *.ico binary
 *.png binary
 *.woff2 binary
+# 换行约定：脚本永远 LF，Windows 批处理永远 CRLF，与各人的 core.autocrlf 无关。

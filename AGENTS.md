@@ -155,4 +155,4 @@ sh manager.sh start
   5. HANDOFF 已清除本任务计划与过期内容，只保留真正未完结事项。
   6. `sh check-docs.sh` 通过。
 
-<!-- vibe-coding-starter 2026-10-31 · 文档体系版本标记 -->
+<!-- vibe-coding-starter 2026-11-10.1 · 文档体系版本标记 -->
