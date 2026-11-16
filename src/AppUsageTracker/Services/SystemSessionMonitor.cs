@@ -45,14 +45,14 @@ public sealed class SystemSessionMonitor : ISystemSessionMonitor
             or SessionSwitchReason.ConsoleDisconnect
             or SessionSwitchReason.RemoteDisconnect)
         {
-            SetState(SystemSessionState.Locked);
+            SetState(SystemSessionState.Locked, $"会话切换 {args.Reason}");
         }
         else if (args.Reason is SessionSwitchReason.SessionUnlock
                  or SessionSwitchReason.SessionLogon
                  or SessionSwitchReason.ConsoleConnect
                  or SessionSwitchReason.RemoteConnect)
         {
-            SetState(SystemSessionState.Available);
+            SetState(SystemSessionState.Available, $"会话切换 {args.Reason}");
         }
     }
 
@@ -60,21 +60,23 @@ public sealed class SystemSessionMonitor : ISystemSessionMonitor
     {
         if (args.Mode == PowerModes.Suspend)
         {
-            SetState(SystemSessionState.Suspended);
+            SetState(SystemSessionState.Suspended, $"电源模式 {args.Mode}");
         }
         else if (args.Mode == PowerModes.Resume)
         {
-            SetState(SystemSessionState.Available);
+            SetState(SystemSessionState.Available, $"电源模式 {args.Mode}");
         }
     }
 
-    private void SetState(SystemSessionState state)
+    /// <summary>状态迁移写 INFO 日志：锁屏/休眠时刻若发生退出，可据此与退出链日志对齐归因。</summary>
+    private void SetState(SystemSessionState state, string source)
     {
         if (State == state)
         {
             return;
         }
 
+        AppLogger.Info($"系统状态变化：{source}，{State} → {state}。");
         State = state;
         StateChanged?.Invoke(this, state);
     }

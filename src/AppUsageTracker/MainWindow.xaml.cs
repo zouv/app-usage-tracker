@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using AppUsageTracker.Services;
 
 namespace AppUsageTracker;
 
@@ -83,6 +84,9 @@ public partial class MainWindow : Window
         if (!App.Current.IsExiting)
         {
             var minimizeToTray = App.Current.RuntimeOrNull?.Settings.MinimizeToTrayOnClose ?? true;
+            AppLogger.Info(minimizeToTray
+                ? "主窗口收到关闭请求：取消关闭并隐藏到托盘。"
+                : "主窗口收到关闭请求：未启用托盘驻留，转完整退出流程。");
             if (minimizeToTray)
             {
                 eventArgs.Cancel = true;
@@ -93,7 +97,7 @@ public partial class MainWindow : Window
             // 关闭托盘驻留时也必须走完整退出流程，否则运行时与未落盘会话不会收尾。
             // 先结束本次 OnClosing，再由调度器发起退出，避免在关闭回调里重入 Close()。
             eventArgs.Cancel = true;
-            Dispatcher.BeginInvoke(App.Current.ExitApplication);
+            Dispatcher.BeginInvoke(() => App.Current.ExitApplication("关闭按钮且未启用托盘驻留"));
             return;
         }
 

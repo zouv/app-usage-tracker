@@ -1075,6 +1075,16 @@
         </ControlTemplate.Triggers>
     </ControlTemplate>
 
+    <!--
+        翻页 RepeatButton 必须显式给透明模板：只设 Background=Transparent 而不覆盖模板时，
+        会套用 Aero2 默认 RepeatButton 模板，其 IsMouseOver 触发器把整段翻页区（轨道空白处）
+        刷成经典浅蓝。这里用可命中测试的透明 Border、不带任何触发器，
+        保留点击翻页功能的同时移除悬停高亮。
+    -->
+    <ControlTemplate x:Key="ScrollBar.PageButton" TargetType="RepeatButton">
+        <Border Background="{TemplateBinding Background}" />
+    </ControlTemplate>
+
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Width" Value="10" />
@@ -1092,6 +1102,7 @@
                            IsDirectionReversed="True">
                         <Track.DecreaseRepeatButton>
                             <RepeatButton Command="ScrollBar.PageUpCommand"
+                                          Template="{StaticResource ScrollBar.PageButton}"
                                           Background="Transparent"
                                           BorderThickness="0"
                                           Focusable="False" />
@@ -1101,6 +1112,7 @@
                         </Track.Thumb>
                         <Track.IncreaseRepeatButton>
                             <RepeatButton Command="ScrollBar.PageDownCommand"
+                                          Template="{StaticResource ScrollBar.PageButton}"
                                           Background="Transparent"
                                           BorderThickness="0"
                                           Focusable="False" />
@@ -1121,6 +1133,7 @@
                                    IsDirectionReversed="False">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.PageLeftCommand"
+                                                  Template="{StaticResource ScrollBar.PageButton}"
                                                   Background="Transparent"
                                                   BorderThickness="0"
                                                   Focusable="False" />
@@ -1130,6 +1143,7 @@
                                 </Track.Thumb>
                                 <Track.IncreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.PageRightCommand"
+                                                  Template="{StaticResource ScrollBar.PageButton}"
                                                   Background="Transparent"
                                                   BorderThickness="0"
                                                   Focusable="False" />

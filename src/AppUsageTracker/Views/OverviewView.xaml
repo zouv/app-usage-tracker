@@ -25,8 +25,25 @@
                 <TextBlock Text="{Binding TodayLabel}"
                            Style="{StaticResource Text.Muted}" Margin="0,4,0,0" />
             </StackPanel>
-            <Button Grid.Column="1" Content="{Binding PauseButtonText}"
-                    Command="{Binding TogglePauseCommand}" />
+            <Button Grid.Column="1" Style="{StaticResource Button.Icon}"
+                    Command="{Binding TogglePauseCommand}"
+                    ToolTip="{Binding PauseButtonText}"
+                    AutomationProperties.Name="{Binding PauseButtonText}"
+                    VerticalAlignment="Center">
+                <Path Width="14" Height="14" Stretch="Uniform"
+                      Fill="{DynamicResource Brush.Text}">
+                    <Path.Style>
+                        <Style TargetType="Path">
+                            <Setter Property="Data" Value="{StaticResource Icon.Pause}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                    <Setter Property="Data" Value="{StaticResource Icon.Play}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Path.Style>
+                </Path>
+            </Button>
         </Grid>
 
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,14">

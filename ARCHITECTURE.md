@@ -213,6 +213,12 @@ Windows 注销 / 关机（SessionEnding）
         → 导入失败则 ActivitySessionService.ResumeAsync + TrackingCoordinator.Start 续听
 ```
 
+退出归因埋点（INFO）：`ExitApplication(reason)` / `ExitWithoutSaving(reason)` 记录调用原因（托盘菜单、
+关闭按钮且未启用托盘驻留、恢复备份成功），`MainWindow.OnClosing` 记录「隐藏到托盘」或「转完整退出」分支，
+`OnSessionEnding` 记录 `ReasonSessionEnding`，第二实例启动、`Application.Exit`（含退出码）与
+`AppDomain.ProcessExit` 各记一条；`SystemSessionMonitor.SetState` 记录来源（会话切换原因 / 电源模式）与状态迁移。
+锁屏分支只改状态、不接退出链；被外部终止时不会出现 Exit/ProcessExit 日志，据此区分「自走退出链」与「被结束」。
+
 ### 3.7 桌面倒计时定时器
 
 ```text
@@ -270,6 +276,7 @@ Windows 注销 / 关机（SessionEnding）
 | 资源字典顺序 | `App.xaml` 的 `MergedDictionaries` | 第 0 位调色板、第 1 位语言字典由服务按下标替换；`Icons.xaml` 必须先于 `Theme.xaml` |
 | 公共控件样式 | `Themes/Theme.xaml` | 颜色使用 `DynamicResource`；模板、圆角和字号遵循 §7 |
 | 细滚动条 | `Themes/Theme.xaml` 的 `ScrollBar.Thin` | 排行等窄面板经 `ListBox.Resources` 套用，约默认 1/3 宽；复用默认模板，不重写 Track；排行卡片右内边距 8（Border Padding 覆盖 + ListBox 无右 margin） |
+| 滚动条翻页按钮模板 | `Themes/Theme.xaml` 的 `ScrollBar.PageButton` | 垂直/水平四个 RepeatButton 共用的透明无触发器模板，去掉轨道悬停高亮，见 §7 |
 | 明暗调色板 | `Themes/Palette.Light.xaml`、`Palette.Dark.xaml` | 两文件资源键一一对应，由 `ThemeService` 整体替换 |
 | 矢量图标 | `Themes/Icons.xaml` 的 `Icon.*` | 统一 StreamGeometry，通过 Path 引用，不新增 MDL2 字符图标 |
 | 本地化文案 | `Strings/Strings.Chinese.xml`、`Strings.English.xml` | 键一一对应；XAML 用 `Loc.*`，代码用 `LocalizationService.T` |
@@ -315,6 +322,7 @@ Windows 注销 / 关机（SessionEnding）
 - **Brush 属性不要写 `Fill=”None”`**：`None` 不是合法 Brush 字面量，BAML 反序列化时 `Brush.Parse` 抛 `FormatException`。要「无填充」写 `Fill=”Transparent”` 或 `Fill=”{x:Null}”`。
 - **重写 ScrollBar 模板时，Track 必须是模板根元素**：外面套 `Border`/`Grid` 行都会让 `PART_Track` 拿不到完整可用空间，WPF 内部按 Track 实际尺寸分配 Decrease/Thumb/Increase 三段，会出现「内容滚到底、拇指却跑出可视区」的错位。视觉圆角应在 Thumb 自己的模板里加，不要包在外层容器上。
 - **垂直 ScrollBar 自定义模板必须 `IsDirectionReversed="True"`**：默认 `False` 时滚轮方向正确，但**拖动 Thumb 方向会反**（WPF 默认模板的垂直 ScrollBar 就是 True）。改 ScrollBar 模板后必须做「滚轮向下/向上 + PageUp/PageDown 命令 + 拖动拇指」五种操作的完整自测。
+- **ScrollBar 的翻页 RepeatButton 必须显式给透明模板**（`ScrollBar.PageButton`）：只设 `Background="Transparent"` 而不覆盖 `Template` 时，会套用 Aero2 默认 RepeatButton 模板，其 `IsMouseOver` 触发器把整段翻页区（轨道空白处）刷成经典浅蓝，表现为「鼠标移到滚动条空白处出现高亮」。模板用可命中测试的透明 `Border`、不带任何触发器，既去掉悬停高亮又保留点击翻页（`Command` 仍在 RepeatButton 上）。验证悬停类改动要用「拇指悬停会变亮」作阳性对照，证明鼠标跟踪确实生效，避免把「没触发悬停」误判成「高亮已移除」。
 - **圆角只能用两档**：`Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）；不要硬编码 7、4 等值。
 - **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。**例外**：倒计时面板剩余时间/状态字号须随面板宽度自适应（`TimerViewModel.UpdateFontSizes` 以 `FormattedText` 实测文本宽度反推 `PanelFontSize`/`PanelStatusFontSize`），固定资源键或估算字宽都会在窄面板排版变形。
 - **隐式 TextBlock 样式全局 `TextWrapping=Wrap`**：单行语义的文本（如倒计时面板数字）必须显式 `NoWrap`，否则字号再小也可能折行；配套字号要用 `FormattedText` 实测字宽（估算 0.56em/数字 小于 Segoe UI SemiBold 实际字宽，60px 宽面板仍会折行），且 VM 测量字体须与 View 的 FontFamily/FontWeight 一致。
@@ -333,8 +341,8 @@ Windows 注销 / 关机（SessionEnding）
 - **DatePicker/Calendar 主题必须显式接线**：`DatePicker.CalendarStyle → Calendar.Style → CalendarItemStyle/CalendarDayButtonStyle/CalendarButtonStyle` 整条链不能缺；ComboBox 收起框显式设置 `VerticalContentAlignment="Center"`。
 - **会话集合不是线程安全的公开 List**：后台心跳/前台事件在写，UI 与统计在读。读取一律用 `AppRuntime.Sessions`（深拷贝快照）或 `GetLiveSessionsSnapshot()`；修改一律经 `IActivitySessionService.EditSessionsAsync`/`ClearSessionsAsync`，不要在 UI 或 `SessionEditor` 里直接 `Add/Remove/Clear`。
 - **进行中的会话不能手工编辑、删除或合并**：`SessionEditor` 会拒绝；时间记录页先判断 `EndedAtUtc` 并给出提示，否则会与状态机里的同一对象失去同步。
-- **关闭窗口必须走完整退出链**：`MinimizeToTrayOnClose=false` 时由 `MainWindow.OnClosing` 转调 `App.ExitApplication`；直接让窗口关闭会绕过 `StopAsync` 和会话落盘。
-- **恢复备份先停写**：`PrepareForRestoreAsync` 会停止协调器并以 `StopWithoutSavingAsync` 结束内存会话；导入后必须 `ExitWithoutSaving()`，否则退出流程会用旧数据覆盖刚导入的文件。导入失败必须调用 `ResumeAfterRestoreFailureAsync` 续听。
+- **关闭窗口必须走完整退出链**：`MinimizeToTrayOnClose=false` 时由 `MainWindow.OnClosing` 转调 `App.ExitApplication(reason)`；直接让窗口关闭会绕过 `StopAsync` 和会话落盘。退出入口必须带原因字符串，便于日志归因。
+- **恢复备份先停写**：`PrepareForRestoreAsync` 会停止协调器并以 `StopWithoutSavingAsync` 结束内存会话；导入后必须 `ExitWithoutSaving(reason)`，否则退出流程会用旧数据覆盖刚导入的文件。导入失败必须调用 `ResumeAfterRestoreFailureAsync` 续听。
 - **备份只包含五份业务 JSON**：`JsonAppDataStore.DataFiles` 是创建与导入的共同白名单，不打包日志、`.bak` 或临时文件；新增持久化文件时须同时评估是否加入该列表。
 - **进程扫描不要无条件跑**：只有 `ShouldScanRunningProcesses` 为真时才枚举进程；运行模式扫描不读取窗口标题，也不要恢复每次心跳都 `Process.GetProcesses()` 的旧实现。
 - **概览页每秒只做增量更新**：`UpdateLiveDurations` 只改活跃卡时长和今日总计；完整统计、排行与时间线只在 `DataChanged`/页面激活时重算。不要在 1 秒定时器里克隆全部会话。
@@ -342,6 +350,7 @@ Windows 注销 / 关机（SessionEnding）
 - **短切换合并只能清理已结束的软件会话**：不要把 `ApplicationId is null` 的空闲/锁屏状态会话或手工记录当作临时会话删除。
 - **`GetLastInputInfo.Time` 是 32 位 tick**：与 `GetTickCount64` 相减必须按 uint 取模（见 `IdleStateMonitor.CalculateElapsedMilliseconds`），否则系统运行超过约 49.7 天后会被误判为长期空闲。
 - **托盘 NotifyIcon 与 UI 刷新必须回 Dispatcher**：快照事件来自后台线程，`TrayIconService.Update` 与各 ViewModel 的刷新都通过 `Dispatcher.BeginInvoke` 合并执行；不要改回同步 `Dispatcher.Invoke` 阻塞监听线程。
+- **后台线程不得读 `Application.Current.MainWindow`**：该 getter 带 `VerifyAccess`，在监听线程调用即抛 `InvalidOperationException`；`OverviewViewModel.RequestRefresh` 只用 `ShouldSkipRefresh` 在 `dispatcher.CheckAccess()` 为真时探测可见性，后台事件一律排队、由回调在 UI 线程再判断（1.3.0 曾因此每秒刷 ERROR 且增量更新失效）。
 - **倒计时结束动作必须回 UI 线程且检查退出态**：`CountdownTimerService.Finished` 来自后台线程，`App.OnCountdownFinished` 用 `Dispatcher.BeginInvoke` 并检查 `_isExiting`，避免退出瞬间弹桌布或锁屏。
 - **倒计时面板位置必须夹取到虚拟屏幕内**：拖拽保存与首次显示都按 `SystemParameters.VirtualScreen*` 夹取，防止分辨率变化后面板跑出屏幕；持久化用 nullable double（null=默认位置），不要把 NaN 写进 JSON。
 - **新增导航页必须三件齐备**：`MainWindow.xaml` 的 NavButton RadioButton（`Command=NavigateCommand` + `CommandParameter`）、`MainViewModel` 的页面属性与 `Navigate` 分支、`App.xaml` 的 VM→View DataTemplate，缺一即白页或导航失效。RadioButton 的 Command 只在 Click 触发（UIA `SelectionItemPattern.Select` 不导航），自动化核对要点其内部 Text 元素；同名文案可能同时出现在页面标题，取最靠左者。

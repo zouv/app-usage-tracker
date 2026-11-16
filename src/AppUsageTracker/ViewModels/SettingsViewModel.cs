@@ -195,7 +195,7 @@ public partial class SettingsViewModel : ObservableObject
                 LocalizationService.T("Loc.Settings.RestoreConfirmTitle"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-            App.Current.ExitWithoutSaving();
+            App.Current.ExitWithoutSaving("恢复备份成功，重启后载入导入数据");
         }
         catch (Exception exception)
         {

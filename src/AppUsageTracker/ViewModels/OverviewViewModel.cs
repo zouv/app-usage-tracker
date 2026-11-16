@@ -67,6 +67,10 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _pauseButtonText = "暂停监听";
 
+    /// <summary>当前是否暂停监听，供概览图标按钮在暂停/播放图标间切换。</summary>
+    [ObservableProperty]
+    private bool _isPaused;
+
     [RelayCommand]
     private async Task TogglePauseAsync()
     {
@@ -132,16 +136,27 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
         Application.Current?.MainWindow is
             { IsVisible: true, WindowState: not WindowState.Minimized };
 
+    /// <summary>
+    /// 是否跳过本次刷新排队。<paramref name="isWindowVisible"/> 读取的 MainWindow 归 UI 线程所有，
+    /// 只有已处于该线程时才允许探测；后台监听线程一律排队，由调度器回调在 UI 线程上再判断可见性，
+    /// 否则每次数据事件都会抛跨线程异常并让概览增量刷新失效。
+    /// </summary>
+    internal static bool ShouldSkipRefresh(
+        Dispatcher dispatcher,
+        bool isActive,
+        Func<bool> isWindowVisible) =>
+        !isActive || (dispatcher.CheckAccess() && !isWindowVisible());
+
     /// <summary>合并后台数据事件与语言切换，只排队一次 UI 刷新，避免阻塞监听线程。</summary>
     private void RequestRefresh()
     {
-        if (!IsActive || !IsWindowVisible())
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted)
         {
             return;
         }
 
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.HasShutdownStarted)
+        if (ShouldSkipRefresh(dispatcher, IsActive, IsWindowVisible))
         {
             return;
         }
@@ -183,6 +198,7 @@ public partial class OverviewViewModel : ObservableObject, IDisposable
         CurrentStateText = StateText(snapshot.State);
         PauseButtonText = LocalizationService.T(
             snapshot.IsPaused ? "Loc.Overview.Resume" : "Loc.Overview.Pause");
+        IsPaused = snapshot.IsPaused;
 
         var sessions = _runtime.GetLiveSessionsSnapshot();
         var appMap = _runtime.Apps.ToDictionary(app => app.Id);

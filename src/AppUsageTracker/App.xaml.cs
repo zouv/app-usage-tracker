@@ -42,11 +42,13 @@ public partial class App : Application
         base.OnStartup(eventArgs);
         RegisterCrashLogging();
         SessionEnding += OnSessionEnding;
+        Exit += OnApplicationExit;
 
         // 单实例：已有一个实例运行时，唤醒它并退出本实例，避免双实例争抢数据文件。
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
         if (!createdNew)
         {
+            AppLogger.Info("已有实例在运行：唤醒它并退出本次启动。");
             SignalExistingInstance();
             Shutdown();
             return;
@@ -101,7 +103,7 @@ public partial class App : Application
                 () => _runtime.ActivityService.SetPausedAsync(!_runtime.Snapshot.IsPaused),
                 () => _runtime.ActivityService.SetPrivateModeAsync(!_runtime.Snapshot.IsPrivateMode),
                 AddCurrentAppAsync,
-                ExitApplication);
+                () => ExitApplication("托盘菜单退出"));
             _runtime.SnapshotChanged += (_, snapshot) => _trayIcon.Update(snapshot);
             _trayIcon.Update(_runtime.Snapshot);
             _notifications = new UsageNotificationService(_runtime, _trayIcon);
@@ -253,7 +255,14 @@ public partial class App : Application
             AppLogger.Error("未观察的任务异常。", eventArgs.Exception);
             eventArgs.SetObserved();
         };
+        // 进程被外部终止时不会触发 ProcessExit；据此区分「自己走完退出链」与「被结束」。
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            AppLogger.Info("进程正常收尾（ProcessExit）。");
     }
+
+    /// <summary>记录退出事件与退出码，覆盖包括第二实例、初始化失败在内的所有 Shutdown 路径。</summary>
+    private void OnApplicationExit(object sender, ExitEventArgs eventArgs) =>
+        AppLogger.Info($"应用退出事件（Exit），退出码 {eventArgs.ApplicationExitCode}。");
 
     /// <summary>
     /// 修正已存在的开机启动项路径（便携版移动目录后仍能启动）；
@@ -355,6 +364,7 @@ public partial class App : Application
             return;
         }
 
+        AppLogger.Info($"系统结束会话（{eventArgs.ReasonSessionEnding}），开始同步收尾。");
         _isExiting = true;
         try
         {
@@ -371,13 +381,15 @@ public partial class App : Application
         }
     }
 
-    public async void ExitApplication()
+    /// <summary>完整退出流程：收尾监听与数据后关闭进程。<paramref name="reason"/> 写入日志便于归因静默退出。</summary>
+    public async void ExitApplication(string reason)
     {
         if (_isExiting)
         {
             return;
         }
 
+        AppLogger.Info($"退出应用：{reason}。");
         _isExiting = true;
         SignalShutdown();
         try
@@ -408,13 +420,14 @@ public partial class App : Application
     /// 导入备份后立即退出，不再写回旧的内存数据。调用方应确保导入已经完成，
     /// 下次启动时由正常加载流程读取导入后的文件。
     /// </summary>
-    public void ExitWithoutSaving()
+    public void ExitWithoutSaving(string reason)
     {
         if (_isExiting)
         {
             return;
         }
 
+        AppLogger.Info($"退出应用（不回写内存数据）：{reason}。");
         _isExiting = true;
         SignalShutdown();
         try

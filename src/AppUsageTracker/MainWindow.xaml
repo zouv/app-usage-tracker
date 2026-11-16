@@ -37,6 +37,10 @@
                            RenderOptions.BitmapScalingMode="HighQuality" />
                     <TextBlock Text="时迹" FontSize="13" FontWeight="SemiBold"
                                VerticalAlignment="Center" Margin="8,0,0,0" />
+                    <TextBlock Text="{Binding AppVersion}" Margin="8,0,0,0"
+                               FontSize="{StaticResource FontSize.Caption}"
+                               Foreground="{DynamicResource Brush.Faint}"
+                               VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- 右上窗口控制按钮：命中 WindowChrome.IsHitTestVisibleInChrome 才能收到点击 -->
@@ -198,9 +202,6 @@
                                            Foreground="{DynamicResource Brush.Muted}" />
                             </StackPanel>
                         </Button>
-                        <TextBlock Text="{Binding AppVersion}" Margin="12,6,0,0"
-                                   FontSize="{StaticResource FontSize.Caption}"
-                                   Foreground="{DynamicResource Brush.Faint}" />
                     </StackPanel>
                 </Grid>
             </Border>
