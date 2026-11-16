@@ -6,28 +6,8 @@
 ## 状态快照
 
 - **最近更新**：2026-11-16
-- **整体状态**：进行中——倒计时交互细化（batch-4）代码、测试与实跑 UI 验证全部完成，正在执行 `/release 1.4.0`
-- **最后验证状态**：Debug 与 Release 构建 ✅ 0 警告 0 错误；测试 ✅ 140/140（含旧配置迁移、窄面板数字不换行回归例）；实跑截图 ✅ `.runtime/screenshots/b4-*.png`、`w*.png` 已逐张核对；`sh check-docs.sh` ✅ 0 警告；`sh manager.sh package` ✅ 1.4.0 双产物（release zip 66,082,349 B / dev zip 491,867 B / 单文件 exe 163,395,764 B，脚本已校验版本）
-
-## 当前任务（In Progress）
-
-**目标**：发布 1.4.0（batch-1/3/4 全部未发布成果）。
-
-**范围**：`src/AppUsageTracker/AppUsageTracker.csproj` 版本三落点、`CHANGELOG.md` 未发布归档、`dist/dev` + `dist/release` 产物、提交/tag/push/GitHub Release、ROADMAP 总进度版本号。
-
-**完成定义**：产物版本与 csproj 一致；Release 资产上传并核验；提交只含发版文件；HANDOFF 收尾清空本任务。
-
-**已完成**：
-- batch-4 全部落地并实跑核对：时/分/秒三输入 + 范围前置标注；空闲仅「开始」、运行「暂停/停止」、暂停「继续/停止」互斥显隐；面板宽 60/120/240/480 截图核对，60 宽数字单行不换行；文字 50/底板 0 分层截图核对；桌布透明度行条件显隐双向核对（6/7 输入框）；5 秒自然结束出全屏桌布（50% 底板、文字不透明）且真实 Esc 关闭；停止后面板隐藏；验毕用户配置原样恢复（1800s/120/80/50/50/ScreenOverlay/托盘驻留 true）。
-- 实跑中发现并修复窄面板字号缺陷：估算字宽（0.56em/数字）小于实际字宽导致 60 宽仍折行 → 改 `FormattedText` 实测 + 宽度 <120 内边距 14→8（`PanelPadding`）+ 数字 `NoWrap`；新增回归测试；ARCH §3.7/§7 已同步。
-- 验证实例已用托盘「退出」正常退出（非强杀）。
-
-**下一步**：
-1. `git add -A` + staged 隐私扫描（本机路径/凭据/二进制）→ 提交 `发布：v1.4.0`（附 Co-Authored-By）→ tag `v1.4.0` → push main + tag（不 --force）。
-2. 资产约定同 v1.3.0：单个裸 exe，命名 `AppUsageTracker-v1.4.0-win-x64.exe`（取 `dist/release/unpack/AppUsageTracker.exe`）；`gh release create v1.4.0` + `.runtime/release-notes.md`，核验资产名/大小/标题。
-3. 收尾：本文件改回无进行中任务、删除本任务计划与过期下一步；待验收仅保留用户未确认项。
-
-**已完成（发布前置）**：check-docs 0 警告；csproj 三落点 1.4.0/1.4.0.0/1.4.0.0 且 msbuild 复核 1.4.0；CHANGELOG 归档 `## [1.4.0] - 2026-11-16` 并保留空未发布区；notes 提取 `.runtime/release-notes.md`（17 行非空）；test 140/140；package 成功且产物版本一致；ROADMAP 总进度与里程碑指向 1.4.0。
+- **整体状态**：无进行中任务。1.4.0 已发布：提交 `c0ed5dd`、tag `v1.4.0`、GitHub Release 资产 `AppUsageTracker-v1.4.0-win-x64.exe`（163,395,764 B，与 v1.3.0 同约定）。
+- **最后验证状态**：Debug/Release 构建 0 警告；测试 140/140；`sh check-docs.sh` 0 警告；batch-4 实跑截图逐张核对（`.runtime/screenshots/b4-*.png`、`w*.png`）；`sh manager.sh package` 1.4.0 双产物版本校验通过；验证实例经托盘「退出」正常退出，用户配置原样恢复。
 
 ## 待验收（代码已完成，等用户确认）
 
@@ -37,6 +17,6 @@
 4. 中英文与明暗主题检查选中行、搜索框和托盘提示；统计页验证排行持久选中、切周期清除过期详情、环比颜色及不能向未来翻页；排行条目多到溢出时核对细滚动条贴卡片右缘（留白 8px）、拖拽方向正确。
 5. 定时器页本轮已自动截图核对全部交互（`.runtime/screenshots/b4-*.png`）；仅「系统锁屏」结束动作需用户手动触发一次确认（自动化不触发锁屏分支）。
 
-## 阻塞 / 待决策（Blockers）
+## 下一步（Next Steps）
 
-- 观察到的疑似既有问题：2026-11-16 多次会话切换/锁屏时刻应用静默走正常退出链（无崩溃日志），与定时器改动无关的可能性大；已列 ROADMAP 近期 #1，未结论前不要归因于新代码。
+1. 待验收逐项通过后清空清单；锁屏分支由用户手动触发确认。静默退出与概览跨线程刷新两项排查见 ROADMAP 近期规划。
