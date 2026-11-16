@@ -36,6 +36,9 @@ public sealed class SystemSessionMonitor : ISystemSessionMonitor
 
     public void Dispose() => Stop();
 
+    /// <summary>倒计时结束动作之一：调用系统锁屏；失败返回 false，由调用方记录降级日志。</summary>
+    public static bool TryLockWorkStation() => NativeMethods.LockWorkStation();
+
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs args)
     {
         if (args.Reason is SessionSwitchReason.SessionLock

@@ -98,20 +98,6 @@
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource NavButton}"
-                                     Command="{Binding NavigateCommand}" CommandParameter="Apps">
-                            <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon.Apps}"
-                                      Fill="{Binding Foreground,
-                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
-                                      Stretch="Uniform" Width="15" Height="15"
-                                      VerticalAlignment="Center" />
-                                <TextBlock Text="{DynamicResource Loc.Nav.Apps}" Margin="11,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Foreground="{Binding Foreground,
-                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                            </StackPanel>
-                        </RadioButton>
-                        <RadioButton Style="{StaticResource NavButton}"
                                      Command="{Binding NavigateCommand}" CommandParameter="Statistics">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon.Statistics}"
@@ -120,6 +106,20 @@
                                       Stretch="Uniform" Width="15" Height="15"
                                       VerticalAlignment="Center" />
                                 <TextBlock Text="{DynamicResource Loc.Nav.Statistics}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Apps">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Apps}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Apps}" Margin="11,0,0,0"
                                            VerticalAlignment="Center"
                                            Foreground="{Binding Foreground,
                                            RelativeSource={RelativeSource AncestorType=RadioButton}}" />
@@ -140,6 +140,23 @@
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource NavButton}"
+                                     Command="{Binding NavigateCommand}" CommandParameter="Timer">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Timer}"
+                                      Fill="{Binding Foreground,
+                                      RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Stretch="Uniform" Width="15" Height="15"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Loc.Nav.Timer}" Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground,
+                                           RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1">
+                        <RadioButton Style="{StaticResource NavButton}"
                                      Command="{Binding NavigateCommand}" CommandParameter="Settings">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon.Settings}"
@@ -153,10 +170,7 @@
                                            RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                             </StackPanel>
                         </RadioButton>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1">
-                        <Separator Margin="0,0,0,8" />
+                        <Separator Margin="0,4,0,8" />
                         <Button Command="{Binding TogglePrivateModeCommand}"
                                 Style="{StaticResource Button.Ghost}"
                                 HorizontalContentAlignment="Left"
@@ -184,6 +198,9 @@
                                            Foreground="{DynamicResource Brush.Muted}" />
                             </StackPanel>
                         </Button>
+                        <TextBlock Text="{Binding AppVersion}" Margin="12,6,0,0"
+                                   FontSize="{StaticResource FontSize.Caption}"
+                                   Foreground="{DynamicResource Brush.Faint}" />
                     </StackPanel>
                 </Grid>
             </Border>

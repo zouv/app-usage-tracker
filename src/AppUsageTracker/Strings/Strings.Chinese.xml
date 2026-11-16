@@ -11,6 +11,7 @@
     <String Key="Loc.Nav.Apps">软件管理</String>
     <String Key="Loc.Nav.Statistics">统计分析</String>
     <String Key="Loc.Nav.Timeline">时间记录</String>
+    <String Key="Loc.Nav.Timer">定时器</String>
     <String Key="Loc.Nav.Settings">设置</String>
     <String Key="Loc.Nav.PrivateModeTooltip">隐私模式期间不记录软件使用</String>
 
@@ -245,6 +246,42 @@
     <String Key="Loc.Settings.HistoryCleared">历史会话和修正记录已清除</String>
     <String Key="Loc.Settings.ChooseBackupDir">选择备份保存目录</String>
     <String Key="Loc.Settings.BackupFilter">AppUsageTracker 备份|*.zip</String>
+    <String Key="Loc.Settings.Timer.Duration">倒计时时长（合计至少 1 秒）</String>
+    <String Key="Loc.Settings.Timer.Start">开始倒计时</String>
+    <String Key="Loc.Settings.Timer.Pause">暂停</String>
+    <String Key="Loc.Settings.Timer.Resume">继续</String>
+    <String Key="Loc.Settings.Timer.Stop">停止</String>
+    <String Key="Loc.Settings.Timer.ShowPanel">在桌面置顶显示倒计时面板（可拖拽）</String>
+    <String Key="Loc.Settings.Timer.PanelWidth">面板宽度（60–480）</String>
+    <String Key="Loc.Settings.Timer.Pixel">像素</String>
+    <String Key="Loc.Settings.Timer.TextOpacity">文字不透明度（20–100）</String>
+    <String Key="Loc.Settings.Timer.BaseOpacity">底板不透明度（0–100）</String>
+    <String Key="Loc.Settings.Timer.OverlayOpacity">桌布底板不透明度（10–100）</String>
+    <String Key="Loc.Settings.Timer.Percent">%</String>
+    <String Key="Loc.Settings.Timer.EndAction">结束后操作</String>
+    <String Key="Loc.Settings.Timer.Hint">面板可拖拽移动并记住位置；全屏桌布按 Esc 关闭。</String>
+    <String Key="Loc.Settings.Range.TimerHours">0–99</String>
+    <String Key="Loc.Settings.Range.TimerMinutes">0–59</String>
+    <String Key="Loc.Settings.Range.TimerSeconds">0–59</String>
+    <String Key="Loc.Settings.Range.TimerTotal">合计至少 1 秒</String>
+    <String Key="Loc.Settings.Range.TimerPanelWidth">60–480 像素</String>
+    <String Key="Loc.Settings.Range.TimerTextOpacity">20–100%</String>
+    <String Key="Loc.Settings.Range.TimerBaseOpacity">0–100%</String>
+    <String Key="Loc.Settings.Range.TimerOverlayOpacity">10–100%</String>
+
+    <!-- 桌面倒计时 -->
+    <String Key="Loc.Timer.Title">定时器</String>
+    <String Key="Loc.Timer.Subtitle">设置倒计时与结束后的操作，可选桌面置顶倒计时面板。</String>
+    <String Key="Loc.Timer.StatusIdle">未开始</String>
+    <String Key="Loc.Timer.Unit.Hours">时（0–99）</String>
+    <String Key="Loc.Timer.Unit.Minutes">分（0–59）</String>
+    <String Key="Loc.Timer.Unit.Seconds">秒（0–59）</String>
+    <String Key="Loc.Timer.Action.LockScreen">系统锁屏</String>
+    <String Key="Loc.Timer.Action.ScreenOverlay">全屏桌布（Esc 关闭）</String>
+    <String Key="Loc.Timer.PanelStatusRunning">倒计时进行中</String>
+    <String Key="Loc.Timer.PanelStatusPaused">已暂停</String>
+    <String Key="Loc.Timer.OverlayTitle">倒计时结束，休息一下</String>
+    <String Key="Loc.Timer.OverlayHint">按 Esc 关闭</String>
 
     <!-- 系统托盘 -->
     <String Key="Loc.Tray.Tooltip">软件使用时长统计</String>

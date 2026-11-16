@@ -39,6 +39,9 @@
             <DataTemplate DataType="{x:Type viewModels:TimelineViewModel}">
                 <views:TimelineView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:TimerViewModel}">
+                <views:TimerView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
                 <views:SettingsView />
             </DataTemplate>

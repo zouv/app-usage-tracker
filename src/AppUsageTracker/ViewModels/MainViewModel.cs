@@ -14,6 +14,7 @@ public partial class MainViewModel : ObservableObject
         AppsViewModel apps,
         StatisticsViewModel statistics,
         TimelineViewModel timeline,
+        TimerViewModel timer,
         SettingsViewModel settings)
     {
         _runtime = runtime;
@@ -21,6 +22,7 @@ public partial class MainViewModel : ObservableObject
         Apps = apps;
         Statistics = statistics;
         Timeline = timeline;
+        Timer = timer;
         Settings = settings;
         SelectedPage = Overview;
         _runtime.SnapshotChanged += (_, snapshot) =>
@@ -66,11 +68,23 @@ public partial class MainViewModel : ObservableObject
 
     public OverviewViewModel Overview { get; }
 
+    /// <summary>侧边栏底部显示的版本号，取自程序集版本。</summary>
+    public string AppVersion { get; } = FormatAppVersion();
+
+    private static string FormatAppVersion()
+    {
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        return version is null ? "v1.0.0" : $"v{version.Major}.{version.Minor}.{version.Build}";
+    }
+
     public AppsViewModel Apps { get; }
 
     public StatisticsViewModel Statistics { get; }
 
     public TimelineViewModel Timeline { get; }
+
+    /// <summary>定时器独立页面的状态与命令。</summary>
+    public TimerViewModel Timer { get; }
 
     public SettingsViewModel Settings { get; }
 
@@ -98,6 +112,7 @@ public partial class MainViewModel : ObservableObject
             "Apps" => Apps,
             "Statistics" => Statistics,
             "Timeline" => Timeline,
+            "Timer" => Timer,
             "Settings" => Settings,
             _ => Overview,
         };

@@ -11,6 +11,7 @@
     <String Key="Loc.Nav.Apps">Applications</String>
     <String Key="Loc.Nav.Statistics">Statistics</String>
     <String Key="Loc.Nav.Timeline">Timeline</String>
+    <String Key="Loc.Nav.Timer">Timer</String>
     <String Key="Loc.Nav.Settings">Settings</String>
     <String Key="Loc.Nav.PrivateModeTooltip">No usage is recorded during private mode</String>
 
@@ -245,6 +246,42 @@
     <String Key="Loc.Settings.HistoryCleared">History and corrections cleared</String>
     <String Key="Loc.Settings.ChooseBackupDir">Choose backup directory</String>
     <String Key="Loc.Settings.BackupFilter">AppUsageTracker backup|*.zip</String>
+    <String Key="Loc.Settings.Timer.Duration">Countdown duration (at least 1 second total)</String>
+    <String Key="Loc.Settings.Timer.Start">Start countdown</String>
+    <String Key="Loc.Settings.Timer.Pause">Pause</String>
+    <String Key="Loc.Settings.Timer.Resume">Resume</String>
+    <String Key="Loc.Settings.Timer.Stop">Stop</String>
+    <String Key="Loc.Settings.Timer.ShowPanel">Show topmost countdown panel on desktop (draggable)</String>
+    <String Key="Loc.Settings.Timer.PanelWidth">Panel width (60–480)</String>
+    <String Key="Loc.Settings.Timer.Pixel">px</String>
+    <String Key="Loc.Settings.Timer.TextOpacity">Text opacity (20–100)</String>
+    <String Key="Loc.Settings.Timer.BaseOpacity">Background opacity (0–100)</String>
+    <String Key="Loc.Settings.Timer.OverlayOpacity">Overlay background opacity (10–100)</String>
+    <String Key="Loc.Settings.Timer.Percent">%</String>
+    <String Key="Loc.Settings.Timer.EndAction">Action when finished</String>
+    <String Key="Loc.Settings.Timer.Hint">Drag the panel to move it; its position is remembered. Press Esc to close the fullscreen overlay.</String>
+    <String Key="Loc.Settings.Range.TimerHours">0–99</String>
+    <String Key="Loc.Settings.Range.TimerMinutes">0–59</String>
+    <String Key="Loc.Settings.Range.TimerSeconds">0–59</String>
+    <String Key="Loc.Settings.Range.TimerTotal">at least 1 second total</String>
+    <String Key="Loc.Settings.Range.TimerPanelWidth">60–480 px</String>
+    <String Key="Loc.Settings.Range.TimerTextOpacity">20–100%</String>
+    <String Key="Loc.Settings.Range.TimerBaseOpacity">0–100%</String>
+    <String Key="Loc.Settings.Range.TimerOverlayOpacity">10–100%</String>
+
+    <!-- Desktop countdown -->
+    <String Key="Loc.Timer.Title">Timer</String>
+    <String Key="Loc.Timer.Subtitle">Set a countdown and what happens when it finishes; optional topmost desktop panel.</String>
+    <String Key="Loc.Timer.StatusIdle">Not started</String>
+    <String Key="Loc.Timer.Unit.Hours">h (0–99)</String>
+    <String Key="Loc.Timer.Unit.Minutes">min (0–59)</String>
+    <String Key="Loc.Timer.Unit.Seconds">sec (0–59)</String>
+    <String Key="Loc.Timer.Action.LockScreen">Lock system</String>
+    <String Key="Loc.Timer.Action.ScreenOverlay">Fullscreen overlay (Esc to close)</String>
+    <String Key="Loc.Timer.PanelStatusRunning">Counting down</String>
+    <String Key="Loc.Timer.PanelStatusPaused">Paused</String>
+    <String Key="Loc.Timer.OverlayTitle">Time's up — take a break</String>
+    <String Key="Loc.Timer.OverlayHint">Press Esc to close</String>
 
     <!-- System tray -->
     <String Key="Loc.Tray.Tooltip">App Usage Tracker</String>

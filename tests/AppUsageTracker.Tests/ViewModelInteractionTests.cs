@@ -38,7 +38,10 @@ public sealed class ViewModelInteractionTests
     public void InvalidNumericSettingIsNotApplied()
     {
         var runtime = CreateRuntime(out var store);
-        var settings = new SettingsViewModel(runtime, new StartupService(), store);
+        var settings = new SettingsViewModel(
+            runtime,
+            new StartupService(),
+            store);
 
         settings.IdleThresholdMinutes = 0;
 

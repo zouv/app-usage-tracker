@@ -19,6 +19,8 @@ public partial class App : Application
     private TrayIconService? _trayIcon;
     private UsageNotificationService? _notifications;
     private GlobalHotkeyService? _hotkeyService;
+    private CountdownTimerService? _timerService;
+    private TimerViewModel? _timerViewModel;
     private MainWindow? _mainWindow;
     private bool _isExiting;
     private bool _hotkeyCaptureActive;
@@ -78,6 +80,10 @@ public partial class App : Application
             var statistics = new StatisticsViewModel(_runtime);
             var editor = new SessionEditor(_runtime, timeProvider);
             var timeline = new TimelineViewModel(_runtime, editor, new CsvExportService());
+            _timerService = new CountdownTimerService();
+            _timerService.Finished += OnCountdownFinished;
+            var timer = new TimerViewModel(_runtime, _timerService);
+            _timerViewModel = timer;
             var settings = new SettingsViewModel(_runtime, new StartupService(), store);
             var mainViewModel = new MainViewModel(
                 _runtime,
@@ -85,6 +91,7 @@ public partial class App : Application
                 apps,
                 statistics,
                 timeline,
+                timer,
                 settings);
 
             _mainWindow = new MainWindow { DataContext = mainViewModel };
@@ -319,6 +326,27 @@ public partial class App : Application
         ApplyHotkey();
     }
 
+    /// <summary>倒计时自然结束：回 UI 线程按设置执行锁屏或全屏桌布；面板显隐由 TimerViewModel 负责。</summary>
+    private void OnCountdownFinished()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_isExiting || _runtime is null)
+            {
+                return;
+            }
+
+            if (_runtime.Settings.TimerEndAction == Models.TimerEndAction.ScreenOverlay)
+            {
+                new Views.TimerOverlayWindow { DataContext = _timerViewModel }.Show();
+            }
+            else if (!SystemSessionMonitor.TryLockWorkStation())
+            {
+                AppLogger.Debug("倒计时结束调用系统锁屏失败。");
+            }
+        });
+    }
+
     /// <summary>Windows 注销/关机前同步等待一次完整收尾，避免只发起异步退出就被系统终止。</summary>
     private void OnSessionEnding(object sender, SessionEndingCancelEventArgs eventArgs)
     {
@@ -331,6 +359,7 @@ public partial class App : Application
         try
         {
             _hotkeyService?.Dispose();
+            _timerService?.Dispose();
             if (!_runtime.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5)))
             {
                 AppLogger.Debug("关机前的数据保存超过 5 秒，系统将按默认流程继续结束会话。");
@@ -354,6 +383,7 @@ public partial class App : Application
         try
         {
             _hotkeyService?.Dispose();
+            _timerService?.Dispose();
             _mainWindow?.Close();
             _notifications?.Dispose();
             _trayIcon?.Dispose();
@@ -390,6 +420,7 @@ public partial class App : Application
         try
         {
             _hotkeyService?.Dispose();
+            _timerService?.Dispose();
             _mainWindow?.Close();
             _notifications?.Dispose();
             _trayIcon?.Dispose();

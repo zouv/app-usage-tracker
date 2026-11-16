@@ -1,0 +1,43 @@
+<Window x:Class="AppUsageTracker.Views.CountdownPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Countdown"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        ResizeMode="NoResize" SizeToContent="WidthAndHeight">
+    <!-- 桌面置顶倒计时面板：整体可拖拽，宽度绑定设置，位置拖拽后持久化。
+         宽度绑定放在根 Border 上：Window 级 Width 绑定会被 SizeToContent 的内容测量覆盖。
+         文字与底板透明度分层：底板 Border 与文字 StackPanel 各自 Opacity，互不影响。 -->
+    <Border Width="{Binding PanelWidth}"
+            CornerRadius="{StaticResource Radius.Medium}"
+            Background="Transparent"
+            Padding="{Binding PanelPadding}" Cursor="SizeAll">
+        <Grid>
+            <Border CornerRadius="{StaticResource Radius.Medium}"
+                    Background="{DynamicResource Brush.Surface}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                    Opacity="{Binding PanelBaseOpacityFraction}" />
+            <StackPanel Opacity="{Binding PanelTextOpacityFraction}">
+                <!-- 数字禁止换行：字号由 VM 按实测文本宽度反推，换行只会造成排版变形 -->
+                <TextBlock Text="{Binding RemainingText}" HorizontalAlignment="Center"
+                           FontSize="{Binding PanelFontSize}" FontWeight="SemiBold"
+                           TextWrapping="NoWrap" />
+                <TextBlock HorizontalAlignment="Center" Margin="0,2,0,0"
+                           FontSize="{Binding PanelStatusFontSize}"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           Foreground="{DynamicResource Brush.Muted}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="{DynamicResource Loc.Timer.PanelStatusRunning}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTimerPaused}" Value="True">
+                                    <Setter Property="Text" Value="{DynamicResource Loc.Timer.PanelStatusPaused}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

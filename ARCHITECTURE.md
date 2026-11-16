@@ -17,6 +17,7 @@ App
          ├─ AppsViewModel
          ├─ StatisticsViewModel
          ├─ TimelineViewModel
+         ├─ TimerViewModel
          └─ SettingsViewModel
 
 AppRuntime（共享单例）
@@ -49,6 +50,7 @@ AppRuntime（共享单例）
 | 数据持久化 | `Services/JsonAppDataStore*`、`Models/` | XAML 页面 |
 | 统计查询 | `Services/StatisticsService*`、统计模型和测试 | Win32 封装 |
 | 软件管理 | `Views/AppsView*`、`ViewModels/AppsViewModel*`、`TrackedApp*` | 时间线编辑 |
+| 桌面倒计时定时器 | `Services/CountdownTimerService.cs`、`ViewModels/TimerViewModel.cs`、`Views/TimerView.*`、`Views/CountdownPanelWindow.*`、`Views/TimerOverlayWindow.*` | 统计聚合 |
 | 构建发布 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1`、`*.csproj` | 业务服务 |
 | 产品范围 | `docs/design/software-usage-duration-design.md` | 生成目录 |
 
@@ -64,8 +66,8 @@ AppRuntime（共享单例）
 | `tests/AppUsageTracker.Tests/` | 已有 | xUnit 测试项目 |
 | `src/AppUsageTracker/Models/` | 已有 | 软件、规则、会话、设置和统计模型 |
 | `src/AppUsageTracker/Services/` | 已有 | 监听、状态机、持久化、统计、托盘和导出 |
-| `src/AppUsageTracker/ViewModels/` | 已有 | 五个页面和应用壳的状态与命令 |
-| `src/AppUsageTracker/Views/` | 已有 | 概览、软件管理、统计、时间记录和设置 |
+| `src/AppUsageTracker/ViewModels/` | 已有 | 六个页面和应用壳的状态与命令 |
+| `src/AppUsageTracker/Views/` | 已有 | 概览、统计、软件管理、时间记录、定时器和设置 |
 | `src/AppUsageTracker/Controls/ZoomableBarChart.cs` | 已有 | 自绘可缩放堆叠柱状图，滚轮缩放、拖拽平移、悬停高亮 |
 | `src/AppUsageTracker/Controls/ChartLegend.cs` | 已有 | 图表图例，与柱状图双向联动高亮 |
 | `src/AppUsageTracker/ViewModels/ChartLayout.cs` | 已有 | 缩放、平移、槽位合并的纯换算逻辑 |
@@ -74,6 +76,11 @@ AppRuntime（共享单例）
 | `src/AppUsageTracker/Services/AppColorPalette.cs` | 已有 | 8 槽位配色，按软件自动分配并随主题解析 |
 | `src/AppUsageTracker/Services/AppIconProvider.cs` | 已有 | 软件图标解析与缓存 |
 | `src/AppUsageTracker/Services/GlobalHotkeyService.cs` | 已有 | 全局快捷键注册到主窗口句柄并分发 WM_HOTKEY，托盘隐藏后仍可响应 |
+| `src/AppUsageTracker/Services/CountdownTimerService.cs` | 已有 | 倒计时定时器：单调时间源算剩余、System.Timers.Timer 刷新，开始/暂停/继续/停止/结束事件 |
+| `src/AppUsageTracker/ViewModels/TimerViewModel.cs` | 已有 | 定时器独立页状态与命令；桌面面板显隐、拖拽位置持久化 |
+| `src/AppUsageTracker/Views/TimerView.xaml` | 已有 | 定时器独立导航页：剩余时间/状态、时长、开始/暂停/停止、面板与结束动作设置 |
+| `src/AppUsageTracker/Views/CountdownPanelWindow.xaml` | 已有 | 桌面置顶可拖拽倒计时面板，宽度/文字与底板分层不透明度/自适应字号绑定设置 |
+| `src/AppUsageTracker/Views/TimerOverlayWindow.xaml` | 已有 | 倒计时结束的全屏置顶桌布，底板不透明度可配、文字不透明，Esc 关闭 |
 | `src/AppUsageTracker/Models/HotkeyDefinition.cs` | 已有 | 快捷键字符串与「修饰符 + 虚拟键码」的双向转换 |
 | `src/AppUsageTracker/Themes/Theme.xaml` | 已有 | 公共控件样式，颜色一律 DynamicResource |
 | `src/AppUsageTracker/Services/LocalizationService.cs` | 已有 | 界面语言服务，中英文切换、代码取文案 T()、日期格式与枚举显示名 |
@@ -110,6 +117,7 @@ AppRuntime（共享单例）
 | 明暗主题与资源字典 | `Services/ThemeService.cs`、`App.xaml`、`Themes/` | 调色板字典整体替换 |
 | 全局快捷键呼出 / 隐藏 | `Services/GlobalHotkeyService.cs`、`App.xaml.cs` | WM_HOTKEY 分发、`App.ToggleMainWindow` |
 | 托盘与通知 | `Services/TrayIconService.cs`、`UsageNotificationService.cs` | 托盘菜单、连续使用提醒、每日摘要 |
+| 倒计时与结束动作 | `Services/CountdownTimerService.cs`、`ViewModels/TimerViewModel.cs`、`App.xaml.cs` | `Start/Pause/Resume/Stop/Tick`、`OnCountdownFinished`、`SystemSessionMonitor.TryLockWorkStation` |
 | 会话编辑与导出 | `Services/SessionEditor.cs`、`CsvExportService.cs` | 补录、修改、合并、批量删除、CSV 导出；进行中会话会被拒绝 |
 | 列表选择与危险确认 | `Views/AppsView*`、`TimelineViewModel.cs`、`StatisticsViewModel.cs`、`IConfirmationService.cs` | DataGrid 单选样式、删除/合并确认、排行榜 `SelectedAppRow` 与刷新后选择协调 |
 | 构建、打包与清理 | `manager.sh`、根目录 `*.bat`、`scripts/*.ps1` | `cmd_build`、`cmd_test`、`cmd_package`、`cmd_release`、`cmd_clean`；`dev.ps1`、`desktop.ps1`、`package.ps1`、`PackageTransaction.ps1` |
@@ -189,12 +197,12 @@ App.OnStartup
  -> AppRuntime.InitializeAsync
  -> ActivitySessionService.RecoverOpenSessions
  -> TrackingCoordinator.Start
- -> MainWindow / TrayIconService
+ -> MainWindow / TrayIconService / CountdownTimerService（TimerViewModel）
 
 App.ExitApplication
  -> ActivitySessionService.StopAsync
  -> 保存设置 / 软件 / 会话 / 修正
- -> 释放托盘、系统监听与单实例互斥体
+ -> 释放托盘、系统监听、倒计时定时器与单实例互斥体
 
 Windows 注销 / 关机（SessionEnding）
  -> 同步等待 AppRuntime.DisposeAsync（最多 5 秒），不依赖 async void 退出链
@@ -204,6 +212,31 @@ Windows 注销 / 关机（SessionEnding）
         → JsonAppDataStore.ImportBackupAsync → App.ExitWithoutSaving
         → 导入失败则 ActivitySessionService.ResumeAsync + TrackingCoordinator.Start 续听
 ```
+
+### 3.7 桌面倒计时定时器
+
+```text
+定时器独立页（MainViewModel.Timer → TimerViewModel，App.xaml DataTemplate 承载 TimerView）
+ -> CountdownTimerService.Start（单调时间源算剩余，System.Timers.Timer 500ms 刷新）
+ -> Changed → TimerViewModel 回 Dispatcher 刷新剩余时间、运行/暂停状态与面板显隐
+ -> Finished → App.OnCountdownFinished 回 UI 线程：
+     LockScreen → SystemSessionMonitor.TryLockWorkStation（user32.LockWorkStation 封装）
+     ScreenOverlay → TimerOverlayWindow（主屏全屏、底板不透明度绑定 `OverlayOpacityFraction`、文字保持不透明、Esc 关闭）
+```
+
+面板（CountdownPanelWindow）根 Border 绑 `PanelWidth`，内部底板 Border 与文字 StackPanel 分层绑
+`PanelBaseOpacityFraction` / `PanelTextOpacityFraction`（根 Border 背景 Transparent 承载逐层 alpha）；
+剩余时间/状态字号由 `UpdateFontSizes` 自适应：`MeasureRemainingEm` 用 `FormattedText` 按面板数字同款字体
+（`SystemFonts.MessageFontFamily` + SemiBold）实测 100px 字宽换算 em，再按可用宽度反推 `PanelFontSize`（夹 10–32）；
+宽度 <120 时左右内边距由 14 收至 8（`PanelPadding`）。数字 TextBlock 必须 `TextWrapping="NoWrap"`
+（隐式 TextBlock 样式全局 Wrap），状态文字可换行。拖拽结束回写
+`AppSettings.TimerPanelLeft/Top`（nullable double，null 为默认位置）持久化。
+
+设置项修改即时生效并走 `SaveSettingsAsync`：时长为时/分/秒三输入合成 `TotalSeconds`→`TimerDurationSeconds`；
+面板开关/宽度（60–480）/文字不透明度（20–100）/底板不透明度（0–100）/结束动作；
+桌布底板不透明度（10–100）行仅 `IsOverlayAction`（结束动作=全屏桌布）时显示。
+按钮显隐互斥：空闲只显「开始」，运行中显「暂停/继续」+「停止」（`IsTimerActive`/`IsTimerPaused` 驱动）。
+旧配置一次性迁移见 §7。
 
 ## 4. 数据契约
 
@@ -236,6 +269,7 @@ Windows 注销 / 关机（SessionEnding）
 | --- | --- | --- |
 | 资源字典顺序 | `App.xaml` 的 `MergedDictionaries` | 第 0 位调色板、第 1 位语言字典由服务按下标替换；`Icons.xaml` 必须先于 `Theme.xaml` |
 | 公共控件样式 | `Themes/Theme.xaml` | 颜色使用 `DynamicResource`；模板、圆角和字号遵循 §7 |
+| 细滚动条 | `Themes/Theme.xaml` 的 `ScrollBar.Thin` | 排行等窄面板经 `ListBox.Resources` 套用，约默认 1/3 宽；复用默认模板，不重写 Track；排行卡片右内边距 8（Border Padding 覆盖 + ListBox 无右 margin） |
 | 明暗调色板 | `Themes/Palette.Light.xaml`、`Palette.Dark.xaml` | 两文件资源键一一对应，由 `ThemeService` 整体替换 |
 | 矢量图标 | `Themes/Icons.xaml` 的 `Icon.*` | 统一 StreamGeometry，通过 Path 引用，不新增 MDL2 字符图标 |
 | 本地化文案 | `Strings/Strings.Chinese.xml`、`Strings.English.xml` | 键一一对应；XAML 用 `Loc.*`，代码用 `LocalizationService.T` |
@@ -282,7 +316,9 @@ Windows 注销 / 关机（SessionEnding）
 - **重写 ScrollBar 模板时，Track 必须是模板根元素**：外面套 `Border`/`Grid` 行都会让 `PART_Track` 拿不到完整可用空间，WPF 内部按 Track 实际尺寸分配 Decrease/Thumb/Increase 三段，会出现「内容滚到底、拇指却跑出可视区」的错位。视觉圆角应在 Thumb 自己的模板里加，不要包在外层容器上。
 - **垂直 ScrollBar 自定义模板必须 `IsDirectionReversed="True"`**：默认 `False` 时滚轮方向正确，但**拖动 Thumb 方向会反**（WPF 默认模板的垂直 ScrollBar 就是 True）。改 ScrollBar 模板后必须做「滚轮向下/向上 + PageUp/PageDown 命令 + 拖动拇指」五种操作的完整自测。
 - **圆角只能用两档**：`Radius.Small`（5，小控件）与 `Radius.Medium`（10，卡片/对话框）；不要硬编码 7、4 等值。
-- **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。
+- **字号统一走 `FontSize.*` 资源键**（Caption/Body/Subtitle/Title/PageTitle/Display）；不要硬编码 `FontSize=”21”` 这类散值。**例外**：倒计时面板剩余时间/状态字号须随面板宽度自适应（`TimerViewModel.UpdateFontSizes` 以 `FormattedText` 实测文本宽度反推 `PanelFontSize`/`PanelStatusFontSize`），固定资源键或估算字宽都会在窄面板排版变形。
+- **隐式 TextBlock 样式全局 `TextWrapping=Wrap`**：单行语义的文本（如倒计时面板数字）必须显式 `NoWrap`，否则字号再小也可能折行；配套字号要用 `FormattedText` 实测字宽（估算 0.56em/数字 小于 Segoe UI SemiBold 实际字宽，60px 宽面板仍会折行），且 VM 测量字体须与 View 的 FontFamily/FontWeight 一致。
+- **实跑 UI 自动化经验**：`PrintWindow(hwnd, hdc, 2)` 在非前台甚至锁屏时仍能截 WPF 窗口；PowerShell 驱动 UIA 前须 `SetProcessDPIAware()`，否则缩放屏上 `SetCursorPos` 坐标被虚拟化偏移；WPF ComboBox 的 ListItem UIA Name 是数据项 ToString（非 DisplayMemberPath 文本），按 Label 子串匹配或改用键盘选择；注入键鼠可能被前台应用（如 Unreal Editor）吞，点击/热键要重试；隐藏态主窗口 UIA 枚举不到，可再启动一个实例触发单实例唤醒呼出（第二实例自行退出）。
 
 - **局部 DataGridRow 样式必须继承全局隐式样式**：需要 ToolTip 等局部 Setter 时使用 `BasedOn="{StaticResource {x:Type DataGridRow}}"`，否则会丢失全局 hover/IsSelected 反馈。单项命令对应的 DataGrid 显式使用 Single + FullRow。
 - **危险操作必须通过可替换确认入口**：软件删除、时间记录删除/合并/清除当日统一走 `IConfirmationService`；只有明确确认才调用编辑服务，取消与关闭均不得改数据。
@@ -306,3 +342,9 @@ Windows 注销 / 关机（SessionEnding）
 - **短切换合并只能清理已结束的软件会话**：不要把 `ApplicationId is null` 的空闲/锁屏状态会话或手工记录当作临时会话删除。
 - **`GetLastInputInfo.Time` 是 32 位 tick**：与 `GetTickCount64` 相减必须按 uint 取模（见 `IdleStateMonitor.CalculateElapsedMilliseconds`），否则系统运行超过约 49.7 天后会被误判为长期空闲。
 - **托盘 NotifyIcon 与 UI 刷新必须回 Dispatcher**：快照事件来自后台线程，`TrayIconService.Update` 与各 ViewModel 的刷新都通过 `Dispatcher.BeginInvoke` 合并执行；不要改回同步 `Dispatcher.Invoke` 阻塞监听线程。
+- **倒计时结束动作必须回 UI 线程且检查退出态**：`CountdownTimerService.Finished` 来自后台线程，`App.OnCountdownFinished` 用 `Dispatcher.BeginInvoke` 并检查 `_isExiting`，避免退出瞬间弹桌布或锁屏。
+- **倒计时面板位置必须夹取到虚拟屏幕内**：拖拽保存与首次显示都按 `SystemParameters.VirtualScreen*` 夹取，防止分辨率变化后面板跑出屏幕；持久化用 nullable double（null=默认位置），不要把 NaN 写进 JSON。
+- **新增导航页必须三件齐备**：`MainWindow.xaml` 的 NavButton RadioButton（`Command=NavigateCommand` + `CommandParameter`）、`MainViewModel` 的页面属性与 `Navigate` 分支、`App.xaml` 的 VM→View DataTemplate，缺一即白页或导航失效。RadioButton 的 Command 只在 Click 触发（UIA `SelectionItemPattern.Select` 不导航），自动化核对要点其内部 Text 元素；同名文案可能同时出现在页面标题，取最靠左者。
+- **倒计时面板宽度绑定放在根 Border，不要绑 Window.Width**：`SizeToContent` + `WindowStyle=None` + `AllowsTransparency` 组合下 Window 级 Width 绑定会被内容测量覆盖（实测窗口恒为默认宽、改设置不生效）；正确做法是根 Border 绑 `PanelWidth` + `SizeToContent="WidthAndHeight"`。初始位置用设置宽度计算，不要用 `ActualWidth`（Loaded 时 SizeToContent 布局可能尚未完成）。
+- **面板/桌布逐层不透明度必须 `AllowsTransparency="True"` 且根背景 Transparent**：去掉 `Window.Opacity` 改用子层 `Opacity` 实现「文字/底板分离」时，若不开逐像素 alpha，子层 Opacity 会整窗合成失效；根 Border/GridLayout 背景设 Transparent，底板与文字各自一层绑 fraction。
+- **旧配置迁移只能以「旧字段 > 0」判定，不能以「新字段 <= 0」判定**：旧 JSON 不含新字段，`System.Text.Json` 反序列化到新 `AppSettings` 时缺字段会落到**模型初始化器默认值**（如 `TimerDurationSeconds=1500`，非 0），用 `新字段<=0 && 旧字段>0` 会漏迁移、用户旧值被默认值覆盖。正确做法与不透明度迁移一致：`旧字段>0` 即迁移并清零旧字段（新配置旧字段恒 0，不会误迁移）。
