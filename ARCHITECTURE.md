@@ -291,7 +291,7 @@ Windows 注销 / 关机（SessionEnding）
 | `manager.sh` | build/start/test/icon/package（`pack` 别名）/release/clean/help 统一入口；版本号写入主项目 csproj |
 | `_ps.bat`、`scripts/_common.ps1` | BAT 公共入口与 PowerShell 公共路径、进程、运行记录和受管删除 helpers；自动化用 `APP_USAGE_TRACKER_NO_PAUSE=1` 跳过暂停 |
 | `build.bat`、`test.bat` | 调用 `scripts/build.ps1`、`test.ps1`；支持配置与追加 dotnet 参数，测试遍历所有测试项目 |
-| `run.bat`、`dev.bat`、`stop.bat`、`status.bat` | 调用 `scripts/desktop.ps1`、`dev.ps1`；开发入口先正常停止再构建 Debug；启动时写 `.runtime/desktop.json`，停止只请求正常关闭并等待，绝不强杀 |
+| `run.bat`、`dev.bat`、`stop.bat`、`status.bat` | 调用 `scripts/desktop.ps1`、`dev.ps1`；开发入口先强制关闭仓库内运行实例再构建 Debug；启动时写 `.runtime/desktop.json`，停止只请求正常关闭并等待，绝不强杀 |
 | `package.bat`、`publish.bat` | `package.bat` 直接调用 `scripts/package.ps1`；产出 `dist/dev` 调试 zip 与 `dist/release/unpack` + zip，先写唯一暂存目录并校验版本/单文件/zip，再事务替换与回滚。`publish.bat` 为兼容别名 |
 | `clean.bat`、`ci.bat` | 调用 `scripts/clean.ps1`；清理拒绝运行实例、越界路径和 reparse point，CI 禁用常驻构建服务器并跳过子 BAT 暂停 |
 | `tools/generate-icon.ps1` | 可重现地生成应用图标 |

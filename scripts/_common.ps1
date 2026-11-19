@@ -38,6 +38,31 @@ function Assert-AppNotRunning([string]$Action) {
     }
 }
 
+# dev: close any running instance outright, then continue with the rebuild.
+function Close-AppForDev {
+    $running = @(Get-AppProcesses)
+    if ($running.Count -eq 0) { return }
+    Write-Warn "Detected a running $AppName instance:"
+    foreach ($process in $running) {
+        $processPath = $null
+        try { $processPath = $process.Path } catch { }
+        if ([string]::IsNullOrEmpty($processPath)) { $processPath = '(path unavailable)' }
+        Write-Host ("       PID {0}  {1}" -f $process.Id, $processPath)
+    }
+    Write-Warn 'Force-closing discards any unsaved state in the running app.'
+    foreach ($process in $running) {
+        try { $process.Kill(); [void]$process.WaitForExit(5000) } catch { }
+    }
+    Start-Sleep -Milliseconds 300
+    $remaining = @(Get-AppProcesses)
+    if ($remaining.Count -gt 0) {
+        $details = ($remaining | ForEach-Object { "$($_.ProcessName)($($_.Id))" }) -join ', '
+        throw "Could not close the running $AppName instance ($details). Close it manually and retry."
+    }
+    Remove-RunRecord
+    Write-Ok 'Closed the running app; continuing.'
+}
+
 function Get-ManagedProcess {
     if (-not (Test-Path -LiteralPath $RunRecord -PathType Leaf)) { return $null }
     try { $saved = Get-Content -LiteralPath $RunRecord -Raw | ConvertFrom-Json } catch { return $null }
